@@ -235,7 +235,16 @@ export default function AffiliateDashboardPage() {
         {/* Betting report (not available until game rounds exist) */}
         <div className={`mb-6 ${CARD} p-6`}>
           <p className="text-sm font-semibold text-white">Betting report</p>
-          <p className="mt-2 text-sm text-muted">Betting / wager analytics will appear here once game rounds are live on the platform.</p>
+          {stats && stats.betting.available ? (
+            <div className="mt-3 space-y-1.5">
+              <Row k={`Rounds (${stats.betting.roundsCount})`} v={String(stats.betting.roundsCount)} />
+              <Row k="Wagered" v={money(stats.betting.wageredMinor, aff.currency)} />
+              <Row k="Won" v={money(stats.betting.wonMinor, aff.currency)} />
+              <Row k="Net (GGR)" v={money(stats.betting.ggrMinor, aff.currency)} strong />
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-muted">No betting activity from your referred players yet — figures appear here as they play.</p>
+          )}
         </div>
 
         {/* Program */}

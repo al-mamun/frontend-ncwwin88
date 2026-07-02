@@ -62,7 +62,7 @@ export interface AffiliateStats {
   monthly: { period: string; amountMinor: number }[];
   players: { total: number; ftd: number; signups: number; clicks: number };
   finance: { depositsMinor: number; depositCount: number; withdrawalsMinor: number; withdrawalCount: number; netMinor: number };
-  betting: { available: boolean };
+  betting: { available: boolean; roundsCount: number; wageredMinor: number; wonMinor: number; ggrMinor: number };
   recentCommissions: { id: string; type: string; amountMinor: number; currency: string; status: string; note: string | null; createdAt: string | null }[];
 }
 
