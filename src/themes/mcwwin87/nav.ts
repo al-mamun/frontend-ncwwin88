@@ -1,8 +1,8 @@
 /**
- * Static navigation metadata for the mcwwin87 (Mega Casino World) theme.
+ * Static navigation metadata for the mcwwin87 (Nega Casino World) theme.
  *
  * NAV_CATEGORIES drives the top GameTabs (canonical category taxonomy, lucide
- * icons). SIDEBAR_ITEMS drives the left sidebar / side menu — the MCW design's
+ * icons). SIDEBAR_ITEMS drives the left sidebar / side menu — the NCW design's
  * clean category grid, with full-colour EMOJI icons matching the reference.
  * These are navigation labels only; they drive filtering/routing, not game logic.
  */
@@ -27,7 +27,7 @@ export interface SidebarItem {
 }
 
 /**
- * MCW category set (matches the design's side-menu / category bar). All entries
+ * NCW category set (matches the design's side-menu / category bar). All entries
  * are game categories so the filter behaves consistently; "All Games" maps to
  * the virtual 'hot' bucket (show everything).
  */

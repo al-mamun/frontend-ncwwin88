@@ -1,5 +1,5 @@
 /**
- * mcwwin87 (MCW) — scrolling announcement bar.
+ * mcwwin87 (NCW) — scrolling announcement bar.
  *
  * Shown under the hero banner when the tenant enables it from the dashboard
  * (Profile → Announcement bar). Content + on/off are tenant-configurable; the

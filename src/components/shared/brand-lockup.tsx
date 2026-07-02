@@ -28,8 +28,8 @@ export default function BrandLockup({
     return <img src={tenant.logoUrl} alt={tenant.name} className={cn('h-10 w-auto object-contain', className)} />;
   }
 
-  const initials = (tenant.name || 'MCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'MCW';
-  const parts = (tenant.name || 'Mega Casino World').split(/\s+/);
+  const initials = (tenant.name || 'NCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'NCW';
+  const parts = (tenant.name || 'Nega Casino World').split(/\s+/);
   const top = parts.slice(0, Math.max(1, parts.length - 1)).join(' ').toUpperCase() || 'MEGA CASINO';
   const bottom = (parts.length > 1 ? parts[parts.length - 1] : 'WORLD').toUpperCase();
 

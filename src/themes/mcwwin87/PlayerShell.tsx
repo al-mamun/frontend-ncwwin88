@@ -1,7 +1,7 @@
 /**
- * mcwwin87 (MCW) theme — authenticated (player) shell.
+ * mcwwin87 (NCW) theme — authenticated (player) shell.
  *
- * Full-width MCW chrome for every /player/* inner page: MCW header (desktop) +
+ * Full-width NCW chrome for every /player/* inner page: NCW header (desktop) +
  * MobileHeader, the slide-in mobile menu (Sidebar), the account top-tab bar (on
  * non-lobby pages), the footer, and the sticky bottom nav.
  */

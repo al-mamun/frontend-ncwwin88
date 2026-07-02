@@ -1,7 +1,7 @@
 /**
- * mcwwin87 (MCW) — sticky bottom bar (mobile).
+ * mcwwin87 (NCW) — sticky bottom bar (mobile).
  *
- * Guests: language selector + Sign up + Login (matches MCW mobile design).
+ * Guests: language selector + Sign up + Login (matches NCW mobile design).
  * Logged-in: Home / Promotions / Deposit / My Account with active gold circle.
  */
 

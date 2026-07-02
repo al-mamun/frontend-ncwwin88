@@ -1,8 +1,8 @@
 /**
- * mcwwin87 (MCW) — mobile header.
+ * mcwwin87 (NCW) — mobile header.
  *
- * MCW design lockup: hamburger + brand on the left; country flag + "24-7 CS"
- * customer-support button on the right (matches the MCW mobile design).
+ * NCW design lockup: hamburger + brand on the left; country flag + "24-7 CS"
+ * customer-support button on the right (matches the NCW mobile design).
  * Deposit / account are reached via the sticky bottom nav.
  */
 
@@ -19,8 +19,8 @@ function BrandLockup({ name, logoUrl }: { name: string; logoUrl?: string | null 
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={logoUrl} alt={name} className="h-8 w-auto object-contain" />;
   }
-  const initials = (name || 'MCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'MCW';
-  const parts = (name || 'Mega Casino World').split(/\s+/);
+  const initials = (name || 'NCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'NCW';
+  const parts = (name || 'Nega Casino World').split(/\s+/);
   const top = parts.slice(0, Math.max(1, parts.length - 1)).join(' ').toUpperCase() || 'MEGA CASINO';
   const bottom = (parts.length > 1 ? parts[parts.length - 1] : 'WORLD').toUpperCase();
   return (

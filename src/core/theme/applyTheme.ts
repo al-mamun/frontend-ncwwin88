@@ -15,7 +15,7 @@ import {
 } from '../../themes/registry';
 
 /**
- * This is a DEDICATED single-brand build (Mega Casino World). It must ALWAYS
+ * This is a DEDICATED single-brand build (Nega Casino World). It must ALWAYS
  * render the mcwwin87 theme regardless of the backend tenant record or any
  * Vercel env var, so the brand can never fall back to default. The key is
  * hardcoded; an optional NEXT_PUBLIC_THEME_KEY can still override it for local

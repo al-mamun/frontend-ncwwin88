@@ -1,5 +1,5 @@
 /**
- * mcwwin87 (MCW) — mobile side menu (matches the desktop look).
+ * mcwwin87 (NCW) — mobile side menu (matches the desktop look).
  *
  * Slide-in panel from the left:
  *   - gold header: tenant logo + "Hi Welcome" (+ username) + close (×)
@@ -59,7 +59,7 @@ export default function MobileMenu({ open, onClose }: { open: boolean; onClose: 
 
   if (!open) return null;
 
-  const initials = (tenant.name || 'MCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'MCW';
+  const initials = (tenant.name || 'NCW').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'NCW';
   const affUrl = affiliateSiteUrl(tenant.domain);
 
   const onGrid = (item: GridItem) => {

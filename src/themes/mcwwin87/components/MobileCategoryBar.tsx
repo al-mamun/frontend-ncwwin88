@@ -1,5 +1,5 @@
 /**
- * mcwwin87 (MCW) — mobile category bar (icons + labels, horizontal scroll).
+ * mcwwin87 (NCW) — mobile category bar (icons + labels, horizontal scroll).
  * Two modes:
  *  - Controlled TAB mode (pass `active` + `onSelect`): tapping a category swaps
  *    content in place (no navigation). Used on the mobile home.

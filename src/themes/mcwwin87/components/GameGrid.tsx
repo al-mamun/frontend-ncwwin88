@@ -1,12 +1,12 @@
 /**
- * mcwwin87 (MCW) — game grid + provider strip + card.
+ * mcwwin87 (NCW) — game grid + provider strip + card.
  *
  * Renders REAL games from the shared catalog:
  *   - loading        -> skeletons
  *   - games present  -> provider strip + the responsive grid
  *   - empty / visitor -> a graceful empty/login CTA, never fake games.
  *
- * Cards follow the MCW design: rounded thumb, a coloured NEW/HOT tag, a play
+ * Cards follow the NCW design: rounded thumb, a coloured NEW/HOT tag, a play
  * overlay on hover, and the game name in white below. Imageless games fall back
  * to a token poster via <GamePoster>, so a card is never a plain black box.
  */

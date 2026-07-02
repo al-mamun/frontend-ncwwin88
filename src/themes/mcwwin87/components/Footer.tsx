@@ -172,7 +172,7 @@ export default function Footer() {
       {/* Copyright bar */}
       <div className="footer__bottom">
         <div className="container footer__bottom-inner">
-          <span>&copy; {year} MCW Copyrights. All Rights Reserved</span>
+          <span>&copy; {year} NCW Copyrights. All Rights Reserved</span>
           <div className="footer__cert">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/assets/images/footer-logos/gamcare.svg" alt="GamCare" className="footer__cert-icon" />

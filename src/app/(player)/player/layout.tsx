@@ -1,6 +1,6 @@
 /**
  * Player area layout.
- * Wraps all /player/* routes in the shared MCW shell (header / left sidebar /
+ * Wraps all /player/* routes in the shared NCW shell (header / left sidebar /
  * footer / right floating rail) so inner pages match the public site.
  *
  * Auth: the GAME BROWSING pages (/player/games/*) are PUBLIC so visitors can

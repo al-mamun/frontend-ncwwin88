@@ -92,7 +92,7 @@ function BannerCarousel({ isAuthed }: { isAuthed: boolean }) {
   );
 }
 
-// ── Provider Grid (logo tiles + gold corner triangle, like MCW) ─────────────
+// ── Provider Grid (logo tiles + gold corner triangle, like NCW) ─────────────
 function prettyProvider(key: string): string {
   return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }

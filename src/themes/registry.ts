@@ -6,7 +6,7 @@
  * (TenantPublicConfig.theme) are layered ON TOP of the preset at apply-time
  * (see src/core/theme/applyTheme.ts).
  *
- * This is a DEDICATED single-brand build (Mega Casino World): the registry holds
+ * This is a DEDICATED single-brand build (Nega Casino World): the registry holds
  * the neutral 'default' fallback and the 'mcwwin87' brand theme only.
  */
 
@@ -50,8 +50,8 @@ export const themeRegistry: Record<string, ThemeDescriptor> = {
   },
     mcwwin87: {
     key: 'mcwwin87',
-    label: 'Mega Casino World',
-    // MCW reference palette: dark slate page + navy panels + GOLD brand.
+    label: 'Nega Casino World',
+    // NCW reference palette: dark slate page + navy panels + GOLD brand.
     preset: {
       '--bg-base': '#131728',     // background matching html-design
       '--bg-surface': '#232a48',  // header / sidebar / panels

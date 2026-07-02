@@ -5,7 +5,7 @@
  * surface for that theme. Unknown keys fall back to the 'default' (neutral
  * white-label) theme so a misconfigured tenant always renders a sane site.
  *
- * This is a DEDICATED single-brand build (Mega Casino World): only 'default'
+ * This is a DEDICATED single-brand build (Nega Casino World): only 'default'
  * and 'mcwwin87' are registered.
  */
 

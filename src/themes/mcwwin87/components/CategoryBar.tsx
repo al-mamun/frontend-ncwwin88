@@ -1,7 +1,7 @@
 /**
- * mcwwin87 (MCW) — horizontal category card bar.
+ * mcwwin87 (NCW) — horizontal category card bar.
  *
- * Matches the MCW design: a row of category cards (emoji tile + label). The
+ * Matches the NCW design: a row of category cards (emoji tile + label). The
  * active card uses the gold gradient with dark text; inactive cards are dark
  * elevated cards that highlight gold on hover. On desktop the cards stretch to
  * fill the full row; on mobile the row scrolls horizontally. Drives the same
@@ -18,8 +18,8 @@ export interface CategoryBarItem {
   icon: string; // emoji
 }
 
-/** MCW category set, in the design's display order (extended to fill the row). */
-export const MCW_CATEGORIES: CategoryBarItem[] = [
+/** NCW category set, in the design's display order (extended to fill the row). */
+export const NCW_CATEGORIES: CategoryBarItem[] = [
   { slug: 'hot', label: 'HOT', icon: '🔥' },
   { slug: 'sports', label: 'Sports', icon: '⚽' },
   { slug: 'casino', label: 'Casino', icon: '🎰' },
@@ -42,7 +42,7 @@ export default function CategoryBar({
 }) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] lg:overflow-visible [&::-webkit-scrollbar]:hidden">
-      {MCW_CATEGORIES.map((c) => {
+      {NCW_CATEGORIES.map((c) => {
         const active = activeSlug === c.slug;
         return (
           <button
