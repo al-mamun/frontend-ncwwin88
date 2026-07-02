@@ -122,7 +122,7 @@ function NewTicketForm({ onCreated }: { onCreated: (id: string) => void }) {
     <Card className="mb-4 border-border bg-surface">
       <CardContent className="space-y-3 p-5">
         <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={L.subject} />
-        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={L.describe} className="min-h-28 w-full rounded-md border border-border bg-background p-2 text-sm" />
+        <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder={L.describe} className="min-h-28 w-full rounded-md border border-border bg-surface p-2 text-sm text-white placeholder:text-muted" />
         {err && <p className="text-sm text-danger">{err}</p>}
         <Button disabled={create.isPending || !subject.trim() || !body.trim()} onClick={() => { setErr(null); create.mutate(); }}>
           {create.isPending ? L.submitting : L.submit}
