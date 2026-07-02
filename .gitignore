@@ -1,0 +1,36 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# production
+/build
+
+# env
+.env
+.env*.local
+
+# debug / logs
+npm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Local runtime logs
+*.log
+*.pid
+.dashboard-phase6-*.pid
+dashboard-phase6-*.log
+dashboard-phase6-*.err.log
+dashboard-phase6-*.out.log
+html-design/  
+ 
