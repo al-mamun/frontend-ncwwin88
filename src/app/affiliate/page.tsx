@@ -147,8 +147,8 @@ export default function AffiliateLandingPage() {
             <span className="inline-flex items-center gap-2 rounded-full border border-[var(--brand)]/30 bg-[var(--brand)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--gold-soft)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--gold-soft)]" /> Official Affiliate Program
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-              Turn your traffic into
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl">
+              <span className="block md:whitespace-nowrap">Turn your traffic into</span>
               <span className="block bg-[linear-gradient(90deg,var(--gold-soft),var(--brand-2-dark),var(--danger))] bg-clip-text text-transparent">recurring revenue.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
