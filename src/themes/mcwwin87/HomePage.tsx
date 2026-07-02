@@ -8,6 +8,7 @@ import { SignupPrompt } from '../../components/shared/signup-prompt';
 import { GamePoster } from '../../core/games/GamePoster';
 import { useFeaturedProviders, useGameProviders, useGameProvidersDetailed, useGamesFeed, usePopularCategoryKeys } from '../../core/games/useGameCatalog';
 import { useTenant } from '../../core/tenant/TenantProvider';
+import { useDragScroll } from '../../core/ui/useDragScroll';
 import { useRouter } from 'next/navigation';
 import { useGameLaunch, useWallet } from '../../hooks/player-hooks';
 import { cn } from '../../lib/utils';
@@ -266,6 +267,7 @@ export default function Mcwwin87HomePage() {
   const [mobileCat, setMobileCat] = useState('hot');
   const [activeTab, setActiveTab] = useState(0);
   const [featuredProvider, setFeaturedProvider] = useState('ALL');
+  const featuredTabsRef = useDragScroll<HTMLDivElement>();
 
   // Main feed (popular games)
   const { games, isLoading, isDemo, hasMore, fetchMore, isFetchingMore } = useGamesFeed({
@@ -415,7 +417,7 @@ export default function Mcwwin87HomePage() {
         <section className="block">
           <div className="block__head">
             <h2 className="block__title">{t('section.featured')}</h2>
-            <div className="provider-tabs" id="featuredTabs">
+            <div className="provider-tabs" id="featuredTabs" ref={featuredTabsRef}>
               {providerTabs.map((tab, i) => (
                 <button
                   key={tab.label}
