@@ -171,7 +171,7 @@ export default function GameCategoryLobby() {
         <GamePlayOverlay
           game={activePlay.game}
           session={activePlay.session}
-          balanceMinor={wallet?.balanceMinor ?? 0}
+          balanceMinor={wallet ? wallet.balanceMinor - wallet.heldMinor : 0}
           currency={wallet?.currency ?? 'BDT'}
           onClose={() => setActivePlay(null)}
           onRefreshBalance={refetchWallet}

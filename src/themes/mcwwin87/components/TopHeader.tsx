@@ -17,7 +17,7 @@ export default function TopHeader() {
   const [langOpen, setLangOpen] = useState(false);
 
   const logoSrc = tenant.logoUrl || '/assets/images/logo/logo.webp';
-  const balance = wallet?.balanceMinor != null ? (wallet.balanceMinor / 100).toFixed(2) : '0';
+  const balance = wallet?.balanceMinor != null ? ((wallet.balanceMinor - wallet.heldMinor) / 100).toFixed(2) : '0';
   const currency = tenant.currency || '৳';
 
   function toggleMenu() {

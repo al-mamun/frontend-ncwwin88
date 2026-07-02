@@ -360,7 +360,7 @@ export default function Mcwwin87HomePage() {
         <GamePlayOverlay
           game={activePlay.game}
           session={activePlay.session}
-          balanceMinor={wallet?.balanceMinor ?? 0}
+          balanceMinor={wallet ? wallet.balanceMinor - wallet.heldMinor : 0}
           currency={tenant.currency}
           onRefreshBalance={refetchWallet}
           onClose={() => { setActivePlay(null); refetchWallet(); }}

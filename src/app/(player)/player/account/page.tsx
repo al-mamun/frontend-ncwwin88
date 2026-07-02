@@ -127,7 +127,7 @@ export default function MyAccountHub() {
 
   const currency = wallet?.currency || 'BDT';
   const symbol = CURRENCY_SYMBOLS[currency] ?? '';
-  const balance = wallet ? (wallet.balanceMinor / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '—';
+  const balance = wallet ? ((wallet.balanceMinor - wallet.heldMinor) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '—';
   const membership = profile?.kycStatus === 'APPROVED' ? 'VERIFIED MEMBER' : 'STANDARD MEMBER';
 
   return (
