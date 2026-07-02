@@ -45,6 +45,11 @@ export default function AffiliateDashboardPage() {
     queryFn: () => affiliateApi.dashboard(),
     enabled: !!me,
   });
+  const playersQ = useQuery({
+    queryKey: ['affiliate', 'players'],
+    queryFn: () => affiliateApi.players(),
+    enabled: !!me,
+  });
 
   // Render nothing dashboard-related until we KNOW the session is valid AND
   // onboarding is complete. This prevents the dashboard flashing for a frame
@@ -142,6 +147,37 @@ export default function AffiliateDashboardPage() {
               <Row k="Net (NGR)" v={money(stats?.finance.netMinor ?? 0, aff.currency)} strong />
             </div>
           </div>
+        </div>
+
+        {/* Referred players list */}
+        <div className={`${CARD} mb-6 p-6`}>
+          <p className="mb-3 text-sm font-semibold text-white">Referred players</p>
+          {playersQ.data && playersQ.data.items.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted">
+                    <th className="pb-2 pr-3 font-medium">Player</th>
+                    <th className="pb-2 pr-3 font-medium">Joined</th>
+                    <th className="pb-2 pr-3 font-medium">Deposited</th>
+                    <th className="pb-2 font-medium">FTD</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {playersQ.data.items.map((p) => (
+                    <tr key={p.id}>
+                      <td className="py-2 pr-3 font-medium text-white">{p.name}</td>
+                      <td className="py-2 pr-3 text-muted">{p.joinedAt ? new Date(p.joinedAt).toLocaleDateString() : '—'}</td>
+                      <td className="py-2 pr-3">{money(p.depositsMinor, playersQ.data!.currency)}{p.depositCount ? ` (${p.depositCount})` : ''}</td>
+                      <td className="py-2">{p.ftd ? <span className="rounded bg-success/20 px-2 py-0.5 text-xs text-success">Yes</span> : <span className="text-muted">—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">{playersQ.isLoading ? 'Loading…' : 'No referred players yet. Share your referral link to start earning.'}</p>
+          )}
         </div>
 
         {/* Earnings by month + by type */}

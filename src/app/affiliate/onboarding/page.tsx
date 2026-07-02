@@ -263,7 +263,7 @@ function KycStep({ status, rejectionReason, fileUrl, docType: submittedDocType, 
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="kyc-file" className="text-white/80">Document image</Label>
-            <Input id="kyc-file" type="file" accept="image/png,image/jpeg,image/webp" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="border-white/10 bg-[var(--bg-base)] file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-white" />
+            <Input id="kyc-file" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="border-white/10 bg-[var(--bg-base)] file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-white" />
           </div>
           <button onClick={upload} disabled={busy} className={GOLD_BTN}>{busy ? 'Uploading…' : 'Upload document'}</button>
           {err && <p className="text-xs text-danger">{err}</p>}

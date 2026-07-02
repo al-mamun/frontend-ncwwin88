@@ -81,6 +81,16 @@ export interface AffiliateRegisterInput {
   tenantSlug?: string;
 }
 
+export interface AffiliateReferredPlayer {
+  id: string;
+  name: string;
+  joinedAt: string | null;
+  ftd: boolean;
+  depositsMinor: number;
+  depositCount: number;
+}
+export interface AffiliateReferredPlayers { currency: string; items: AffiliateReferredPlayer[]; }
+
 export const affiliateApi = {
   /* ── auth ── */
   async login(identifier: string, password: string): Promise<{ id: string; username: string }> {
@@ -118,6 +128,10 @@ export const affiliateApi = {
 
   stats(): Promise<AffiliateStats> {
     return affiliateFetch<AffiliateStats>('/affiliate/stats');
+  },
+
+  players(): Promise<AffiliateReferredPlayers> {
+    return affiliateFetch<AffiliateReferredPlayers>('/affiliate/players');
   },
 
   updatePayoutMethod(method: string, payoutDetails: string): Promise<{ affiliate: AffiliateProfile }> {
