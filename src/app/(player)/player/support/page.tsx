@@ -157,7 +157,7 @@ function TicketThread({ id, onBack }: { id: string; onBack: () => void }) {
 
   const qc = useQueryClient();
   const [reply, setReply] = useState('');
-  const detail = useQuery({ queryKey: ['player', 'support', id], queryFn: () => playerApi.getSupportTicket(id) });
+  const detail = useQuery({ queryKey: ['player', 'support', id], queryFn: () => playerApi.getSupportTicket(id), refetchInterval: 3000, refetchOnWindowFocus: true });
   const send = useMutation({
     mutationFn: () => playerApi.replySupportTicket(id, reply.trim()),
     onSuccess: () => { setReply(''); qc.invalidateQueries({ queryKey: ['player', 'support', id] }); qc.invalidateQueries({ queryKey: ['player', 'support'] }); },

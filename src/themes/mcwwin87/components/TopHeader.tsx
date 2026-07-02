@@ -6,6 +6,7 @@ import { useTenant } from '../../../core/tenant/TenantProvider';
 import { useAuth } from '../../../providers/auth-provider';
 import { useWallet } from '../../../hooks/player-hooks';
 import { useI18n } from '../../../core/i18n/LanguageProvider';
+import NotificationBell from './NotificationBell';
 
 export default function TopHeader() {
   const { tenant } = useTenant();
@@ -67,6 +68,7 @@ export default function TopHeader() {
                 <span className="header__wallet-refresh">&#8635;</span>
                 {t('header.mainWallet')} {currency}{balance}
               </div>
+              <NotificationBell />
               {/* Account dropdown */}
               <div className={`header__account ${acctOpen ? 'open' : ''}`} id="accountMenu" style={{ position: 'relative' }}>
                 <button
