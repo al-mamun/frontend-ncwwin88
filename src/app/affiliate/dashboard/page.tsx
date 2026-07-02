@@ -159,7 +159,12 @@ export default function AffiliateDashboardPage() {
                   <tr className="text-left text-xs text-muted">
                     <th className="pb-2 pr-3 font-medium">Player</th>
                     <th className="pb-2 pr-3 font-medium">Joined</th>
-                    <th className="pb-2 pr-3 font-medium">Deposited</th>
+                    <th className="pb-2 pr-3 font-medium">Deposits</th>
+                    <th className="pb-2 pr-3 font-medium">Withdrawals</th>
+                    <th className="pb-2 pr-3 font-medium">Wagered</th>
+                    <th className="pb-2 pr-3 font-medium">Won</th>
+                    <th className="pb-2 pr-3 font-medium">GGR</th>
+                    <th className="pb-2 pr-3 font-medium">Rounds</th>
                     <th className="pb-2 font-medium">FTD</th>
                   </tr>
                 </thead>
@@ -169,6 +174,11 @@ export default function AffiliateDashboardPage() {
                       <td className="py-2 pr-3 font-medium text-white">{p.name}</td>
                       <td className="py-2 pr-3 text-muted">{p.joinedAt ? new Date(p.joinedAt).toLocaleDateString() : '—'}</td>
                       <td className="py-2 pr-3">{money(p.depositsMinor, playersQ.data!.currency)}{p.depositCount ? ` (${p.depositCount})` : ''}</td>
+                      <td className="py-2 pr-3">{money(p.withdrawalsMinor, playersQ.data!.currency)}{p.withdrawalCount ? ` (${p.withdrawalCount})` : ''}</td>
+                      <td className="py-2 pr-3">{money(p.wageredMinor, playersQ.data!.currency)}</td>
+                      <td className="py-2 pr-3">{money(p.wonMinor, playersQ.data!.currency)}</td>
+                      <td className="py-2 pr-3 font-semibold text-white">{money(p.ggrMinor, playersQ.data!.currency)}</td>
+                      <td className="py-2 pr-3 text-muted">{p.rounds}</td>
                       <td className="py-2">{p.ftd ? <span className="rounded bg-success/20 px-2 py-0.5 text-xs text-success">Yes</span> : <span className="text-muted">—</span>}</td>
                     </tr>
                   ))}

@@ -88,6 +88,13 @@ export interface AffiliateReferredPlayer {
   ftd: boolean;
   depositsMinor: number;
   depositCount: number;
+  withdrawalsMinor: number;
+  withdrawalCount: number;
+  netCashMinor: number;
+  wageredMinor: number;
+  wonMinor: number;
+  ggrMinor: number;
+  rounds: number;
 }
 export interface AffiliateReferredPlayers { currency: string; items: AffiliateReferredPlayer[]; }
 
