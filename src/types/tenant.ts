@@ -48,6 +48,8 @@ export interface TenantPublicConfig {
   /** Scrolling announcement bar text + on/off (tenant-configurable). */
   announcementText?: string | null;
   announcementEnabled?: boolean;
+  /** Tenant mobile app download link; shows a Download button when set. */
+  appDownloadUrl?: string | null;
   /** Tenant social/community links: platform -> URL. */
   social?: Record<string, string>;
   /** Show the signup captcha (tenant-controlled). */

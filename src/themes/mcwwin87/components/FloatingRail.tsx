@@ -15,8 +15,9 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, ArrowUp, Download } from 'lucide-react';
+import { useTenant } from '../../../core/tenant/TenantProvider';
 
-const APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL || '';
+const ENV_APP_DOWNLOAD_URL = process.env.NEXT_PUBLIC_APP_DOWNLOAD_URL || '';
 
 function RailCard({
   icon,
@@ -55,6 +56,8 @@ function RailCard({
 }
 
 export default function FloatingRail() {
+  const { tenant } = useTenant();
+  const appUrl = (tenant.appDownloadUrl || ENV_APP_DOWNLOAD_URL || '').trim();
   const router = useRouter();
   const scrollTop = useCallback(() => {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -65,11 +68,13 @@ export default function FloatingRail() {
     <div className="fixed right-3 top-1/2 z-40 hidden -translate-y-1/2 flex-col gap-2.5 lg:flex">
       <RailCard icon={<Home className="h-5 w-5" aria-hidden />} label="Home" onClick={goHome} />
       <RailCard icon={<ArrowUp className="h-5 w-5" aria-hidden />} label="Top" onClick={scrollTop} />
-      <RailCard
-        icon={<Download className="h-5 w-5" aria-hidden />}
-        label="Download APP"
-        {...(APP_DOWNLOAD_URL ? { href: APP_DOWNLOAD_URL } : { onClick: () => {} })}
-      />
+      {appUrl ? (
+        <RailCard
+          icon={<Download className="h-5 w-5" aria-hidden />}
+          label="Download APP"
+          href={appUrl}
+        />
+      ) : null}
       {/* Static responsible-gaming badge (non-interactive). */}
       <span
         aria-hidden
