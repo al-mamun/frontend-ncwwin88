@@ -358,7 +358,10 @@ ul { list-style: none; }
 .game-card:hover .pic img { transform: scale(1.12); }
 /* new media wrapper */
 .game-card__media { position: relative; aspect-ratio: 4/3; overflow: hidden; background: var(--bg-3); }
-.game-card__media img, .game-card__media > * { width: 100%; height: 100%; object-fit: cover; display: block; }
+.game-card__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Only the poster wrapper should fill the media box — NOT the badge / hover
+   overlay (they are also direct children and must keep their own size). */
+.game-card__media > a, .game-card__media > div:first-child { width: 100%; height: 100%; }
 .game-card__badge { position: absolute; top: 6px; left: 6px; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; letter-spacing: .5px; z-index: 2; }
 .game-card__hover { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.6)); opacity: 0; transition: opacity .22s ease; display: flex; align-items: center; justify-content: center; z-index: 3; }
 .game-card:hover .game-card__hover { opacity: 1; }
