@@ -98,6 +98,21 @@ export interface AffiliateReferredPlayer {
 }
 export interface AffiliateReferredPlayers { currency: string; items: AffiliateReferredPlayer[]; }
 
+export interface AffiliateFinanceRow { id: string; player: string; kind: 'deposit' | 'withdrawal'; amountMinor: number; currency: string; at: string | null }
+export interface AffiliateBettingRow { id: string; player: string; game: string; betMinor: number; winMinor: number; netMinor: number; currency: string; at: string | null }
+export interface AffiliateHistory<T> { currency: string; items: T[]; total: number; page: number; limit: number; pages: number }
+export interface AffiliateHistoryParams { from?: string; to?: string; page?: number; limit?: number }
+
+function historyQuery(p: AffiliateHistoryParams): string {
+  const s = new URLSearchParams();
+  if (p.from) s.set('from', p.from);
+  if (p.to) s.set('to', p.to);
+  if (p.page) s.set('page', String(p.page));
+  if (p.limit) s.set('limit', String(p.limit));
+  const q = s.toString();
+  return q ? `?${q}` : '';
+}
+
 export const affiliateApi = {
   /* ── auth ── */
   async login(identifier: string, password: string): Promise<{ id: string; username: string }> {
@@ -139,6 +154,12 @@ export const affiliateApi = {
 
   players(): Promise<AffiliateReferredPlayers> {
     return affiliateFetch<AffiliateReferredPlayers>('/affiliate/players');
+  },
+  financeHistory(params: AffiliateHistoryParams = {}): Promise<AffiliateHistory<AffiliateFinanceRow>> {
+    return affiliateFetch<AffiliateHistory<AffiliateFinanceRow>>(`/affiliate/finance-history${historyQuery(params)}`);
+  },
+  bettingHistory(params: AffiliateHistoryParams = {}): Promise<AffiliateHistory<AffiliateBettingRow>> {
+    return affiliateFetch<AffiliateHistory<AffiliateBettingRow>>(`/affiliate/betting-history${historyQuery(params)}`);
   },
 
   updatePayoutMethod(method: string, payoutDetails: string): Promise<{ affiliate: AffiliateProfile }> {

@@ -50,6 +50,21 @@ export default function AffiliateDashboardPage() {
     queryFn: () => affiliateApi.players(),
     enabled: !!me,
   });
+  const [histFrom, setHistFrom] = useState('');
+  const [histTo, setHistTo] = useState('');
+  const [finPage, setFinPage] = useState(1);
+  const [betPage, setBetPage] = useState(1);
+  const resetHist = () => { setFinPage(1); setBetPage(1); };
+  const financeQ = useQuery({
+    queryKey: ['affiliate', 'finance-history', histFrom, histTo, finPage],
+    queryFn: () => affiliateApi.financeHistory({ from: histFrom || undefined, to: histTo || undefined, page: finPage, limit: 25 }),
+    enabled: !!me,
+  });
+  const bettingQ = useQuery({
+    queryKey: ['affiliate', 'betting-history', histFrom, histTo, betPage],
+    queryFn: () => affiliateApi.bettingHistory({ from: histFrom || undefined, to: histTo || undefined, page: betPage, limit: 25 }),
+    enabled: !!me,
+  });
 
   // Render nothing dashboard-related until we KNOW the session is valid AND
   // onboarding is complete. This prevents the dashboard flashing for a frame
@@ -257,26 +272,115 @@ export default function AffiliateDashboardPage() {
           )}
         </div>
 
+        {/* Financial history */}
+        <div className={`${CARD} mb-6 p-6`}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-white">Financial history</p>
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <label className="flex items-center gap-1">From
+                <input type="date" value={histFrom} onChange={(e) => { setHistFrom(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white" />
+              </label>
+              <label className="flex items-center gap-1">To
+                <input type="date" value={histTo} onChange={(e) => { setHistTo(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white" />
+              </label>
+              {(histFrom || histTo) && <button onClick={() => { setHistFrom(''); setHistTo(''); resetHist(); }} className="rounded-md border border-white/10 px-2 py-1 hover:bg-white/5">Clear</button>}
+            </div>
+          </div>
+          <HistoryTable
+            head={['Player', 'Type', 'Amount', 'When']}
+            rows={financeQ.data?.items.map((r) => [r.player, r.kind === 'deposit' ? 'Deposit' : 'Withdrawal', money(r.amountMinor, r.currency), r.at ? new Date(r.at).toLocaleString() : '—']) ?? []}
+            loading={financeQ.isLoading}
+            empty="No deposits or withdrawals in this range."
+          />
+          <Pager page={financeQ.data?.page ?? 1} pages={financeQ.data?.pages ?? 1} total={financeQ.data?.total ?? 0} onPrev={() => setFinPage((p) => Math.max(1, p - 1))} onNext={() => setFinPage((p) => p + 1)} />
+        </div>
+
+        {/* Betting history */}
+        <div className={`${CARD} mb-6 p-6`}>
+          <p className="mb-4 text-sm font-semibold text-white">Betting history</p>
+          <HistoryTable
+            head={['Player', 'Game', 'Bet', 'Win', 'Net', 'When']}
+            rows={bettingQ.data?.items.map((r) => [r.player, r.game, money(r.betMinor, r.currency), money(r.winMinor, r.currency), money(r.netMinor, r.currency), r.at ? new Date(r.at).toLocaleString() : '—']) ?? []}
+            loading={bettingQ.isLoading}
+            empty="No betting rounds in this range."
+          />
+          <Pager page={bettingQ.data?.page ?? 1} pages={bettingQ.data?.pages ?? 1} total={bettingQ.data?.total ?? 0} onPrev={() => setBetPage((p) => Math.max(1, p - 1))} onNext={() => setBetPage((p) => p + 1)} />
+        </div>
+
         {/* Program */}
         <div className={`${CARD} p-6`}>
-          <p className="mb-3 text-sm font-semibold text-white">Your program</p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm font-semibold text-white">Your program</p>
+            {program && <span className="rounded-full bg-[var(--brand)]/20 px-3 py-1 text-xs font-semibold text-[var(--gold-soft)]">Assigned</span>}
+          </div>
           {isLoading ? (
             <p className="text-sm text-muted">Loading…</p>
           ) : program ? (
-            <div className="space-y-1 text-sm">
-              <p className="font-semibold text-[var(--gold-soft)]">{program.name}</p>
-              <p className="text-muted">
-                Model: {program.model}
-                {program.revenueSharePercent != null && ` · Rev share ${program.revenueSharePercent}%`}
-                {program.cpaAmountMinor != null && ` · CPA ${money(program.cpaAmountMinor, program.currency)}`}
+            <div>
+              <p className="text-lg font-bold text-[var(--gold-soft)]">{program.name}</p>
+              <p className="mt-0.5 text-xs uppercase tracking-wide text-muted">{program.model.replace('_', ' ')} model</p>
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {program.revenueSharePercent != null && <ProgramStat label="Revenue share" value={`${program.revenueSharePercent}%`} />}
+                {program.cpaAmountMinor != null && program.cpaAmountMinor > 0 && <ProgramStat label="CPA / player" value={money(program.cpaAmountMinor, program.currency)} />}
+                {program.qualifyingDepositMinor != null && program.qualifyingDepositMinor > 0 && <ProgramStat label="Qualifying deposit" value={money(program.qualifyingDepositMinor, program.currency)} />}
+                {program.minPayoutMinor != null && <ProgramStat label="Min. payout" value={money(program.minPayoutMinor, program.currency)} />}
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-muted">
+                {program.model === 'revenue_share' ? 'You earn a share of the net gaming revenue (NGR) generated by your referred players, settled weekly.'
+                  : program.model === 'cpa' ? 'You earn a fixed CPA reward the first time a referred player makes a qualifying deposit.'
+                  : 'Hybrid: a fixed CPA on the first qualifying deposit of a referred player, plus an ongoing revenue share.'}
               </p>
-              {program.minPayoutMinor != null && <p className="text-muted">Minimum payout: {money(program.minPayoutMinor, program.currency)}</p>}
             </div>
           ) : (
             <p className="text-sm text-muted">You&apos;ll be assigned a program when your account is approved.</p>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function HistoryTable({ head, rows, loading, empty }: { head: string[]; rows: string[][]; loading: boolean; empty: string }) {
+  if (loading) return <p className="text-sm text-muted">Loading…</p>;
+  if (!rows.length) return <p className="text-sm text-muted">{empty}</p>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left text-xs text-muted">
+            {head.map((h) => <th key={h} className="pb-2 pr-3 font-medium">{h}</th>)}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/5">
+          {rows.map((r, i) => (
+            <tr key={i}>
+              {r.map((c, j) => <td key={j} className={`py-2 pr-3 ${j === 0 ? 'font-medium text-white' : 'text-muted'}`}>{c}</td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Pager({ page, pages, total, onPrev, onNext }: { page: number; pages: number; total: number; onPrev: () => void; onNext: () => void }) {
+  if (total === 0) return null;
+  return (
+    <div className="mt-3 flex items-center justify-between text-xs text-muted">
+      <span>{total} total · page {page} of {pages}</span>
+      <div className="flex gap-2">
+        <button onClick={onPrev} disabled={page <= 1} className="rounded-md border border-white/10 px-3 py-1 hover:bg-white/5 disabled:opacity-40">Previous</button>
+        <button onClick={onNext} disabled={page >= pages} className="rounded-md border border-white/10 px-3 py-1 hover:bg-white/5 disabled:opacity-40">Next</button>
+      </div>
+    </div>
+  );
+}
+
+function ProgramStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-[var(--bg-base)] p-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }
