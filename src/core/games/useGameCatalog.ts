@@ -157,12 +157,17 @@ export function useGameCategories(): CategoryNavItem[] {
     // 1) Operator-defined custom menu wins (fully custom category bar).
     const m = menu.data ?? [];
     if (m.length) {
-      return m.map((item): CategoryNavItem => {
+      const items = m.map((item): CategoryNavItem => {
         const icon = CATEGORY_META[item.icon ?? '']?.icon ?? CATEGORY_META[item.key]?.icon ?? Gamepad2;
         return { slug: item.key as CategoryNavItem['slug'], label: item.label || item.key, icon };
       });
+      // Always surface the virtual 'Hot' tab FIRST when the menu omits it.
+      return items.some((i) => i.slug === 'hot') ? items : [CATEGORY_NAV[0], ...items];
     }
-    // 2) Fallback: data-derived categories (Hot + the feed's categories).
+    // 2) Menu still resolving -> return nothing (don't flash the static default
+    //    set, which caused a visible category "blink" on first paint).
+    if (menu.isLoading) return [];
+    // 3) Fallback: data-derived categories (Hot + the feed's categories).
     const hot = CATEGORY_NAV[0];
     const slugs = (query.data ?? []).filter((x) => x && x !== 'hot');
     if (slugs.length === 0) return CATEGORY_NAV;
@@ -173,7 +178,7 @@ export function useGameCategories(): CategoryNavItem[] {
       return { slug: slug as CategoryNavItem['slug'], label, icon };
     });
     return [hot, ...items];
-  }, [menu.data, query.data]);
+  }, [menu.data, menu.isLoading, query.data]);
 }
 
 
