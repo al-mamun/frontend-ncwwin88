@@ -278,10 +278,10 @@ export default function AffiliateDashboardPage() {
             <p className="text-sm font-semibold text-white">Financial history</p>
             <div className="flex items-center gap-2 text-xs text-muted">
               <label className="flex items-center gap-1">From
-                <input type="date" value={histFrom} onChange={(e) => { setHistFrom(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white" />
+                <input type="date" value={histFrom} onChange={(e) => { setHistFrom(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white [color-scheme:dark]" />
               </label>
               <label className="flex items-center gap-1">To
-                <input type="date" value={histTo} onChange={(e) => { setHistTo(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white" />
+                <input type="date" value={histTo} onChange={(e) => { setHistTo(e.target.value); resetHist(); }} className="rounded-md border border-white/10 bg-[var(--bg-base)] px-2 py-1 text-white [color-scheme:dark]" />
               </label>
               {(histFrom || histTo) && <button onClick={() => { setHistFrom(''); setHistTo(''); resetHist(); }} className="rounded-md border border-white/10 px-2 py-1 hover:bg-white/5">Clear</button>}
             </div>
