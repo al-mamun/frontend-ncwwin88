@@ -12,7 +12,7 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, CheckCircle2, XCircle, AlertCircle, Info } from 'lucide-react';
 import {
   useNotifications,
   useUnreadNotifications,
@@ -33,17 +33,17 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function dotColor(type: string): string {
+function getNotificationIcon(type: string) {
   switch (type) {
-    case 'WARNING':
-      return 'bg-brand-2';
     case 'SUCCESS':
     case 'DEPOSIT':
-      return 'bg-success';
+      return <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />;
+    case 'WARNING':
+      return <AlertCircle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />;
     case 'WITHDRAW':
-      return 'bg-gold-soft';
+      return <Info className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />;
     default:
-      return 'bg-muted';
+      return <Bell className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />;
   }
 }
 
@@ -86,68 +86,75 @@ export default function NotificationBell() {
       >
         <Bell className="h-5 w-5" aria-hidden />
         {count > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-[1.05rem] items-center justify-center rounded-full bg-brand-2 px-1 text-[10px] font-bold leading-4 text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-2 px-1 text-[9px] font-black leading-4 text-white animate-pulse shadow-md">
             {count > 99 ? '99+' : count}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-lg border border-border bg-surface shadow-xl">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-sm font-semibold text-foreground">Notifications</p>
+        <div className="absolute right-0 z-50 mt-2.5 w-80 overflow-hidden rounded-xl border border-border bg-[#1a1b1e]/95 backdrop-blur-md shadow-2xl transition-all duration-300 transform scale-100 opacity-100 origin-top-right">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-[#111214]/50">
+            <p className="text-sm font-extrabold text-white tracking-wide">Notifications</p>
             <button
               type="button"
               onClick={() => markAll.mutate()}
               disabled={markAll.isPending || count === 0}
-              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-elevated hover:text-gold-soft disabled:opacity-40"
+              className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted transition-colors hover:bg-elevated hover:text-gold-soft disabled:opacity-40 font-bold"
             >
               <CheckCheck className="h-3.5 w-3.5" aria-hidden /> Mark all read
             </button>
           </div>
 
-          <div className="max-h-[22rem] overflow-y-auto">
+          <div className="max-h-[22rem] overflow-y-auto custom-scrollbar">
             {list.isLoading ? (
               <div className="space-y-2 p-4">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-md bg-elevated" />
+                  <div key={i} className="h-12 animate-pulse rounded-md bg-elevated/40" />
                 ))}
               </div>
             ) : items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">You&apos;re all caught up.</p>
+              <p className="px-4 py-8 text-center text-xs text-muted font-bold">You&apos;re all caught up.</p>
             ) : (
               <ul className="divide-y divide-border">
-                {items.map((n) => (
-                  <li key={n.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!n.isRead) markRead.mutate(n.id);
-                      }}
-                      className={`flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-elevated ${
-                        n.isRead ? '' : 'bg-elevated/40'
-                      }`}
-                    >
-                      <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${dotColor(n.type)}`} aria-hidden />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-foreground">{n.title}</span>
-                        {n.message ? (
-                          <span className="mt-0.5 block text-xs text-muted">{n.message}</span>
-                        ) : null}
-                        <span className="mt-1 block text-[11px] text-muted/70">{timeAgo(n.createdAt)}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
+                {items.map((n) => {
+                  const isUnread = !n.isRead;
+                  return (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!n.isRead) markRead.mutate(n.id);
+                        }}
+                        className={`flex w-full gap-3 px-4 py-3.5 text-left transition-all duration-300 hover:bg-elevated hover:pl-5 border-l-2 ${
+                          isUnread
+                            ? 'bg-elevated/20 border-l-brand-2'
+                            : 'border-l-transparent text-muted'
+                        }`}
+                      >
+                        {getNotificationIcon(n.type)}
+                        <span className="min-w-0 flex-1">
+                          <span className={`block truncate text-xs font-bold tracking-wide ${isUnread ? 'text-white' : 'text-gray-400'}`}>
+                            {n.title}
+                          </span>
+                          {n.message ? (
+                            <span className="mt-0.5 block text-[11px] text-gray-500 leading-relaxed line-clamp-2">{n.message}</span>
+                          ) : null}
+                          <span className="mt-1 block text-[10px] text-gray-500/60 font-mono">{timeAgo(n.createdAt)}</span>
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
 
-          <div className="border-t border-border p-2">
+          <div className="border-t border-border p-2 bg-[#111214]/50">
             <Link
               href="/player/notifications"
               onClick={() => setOpen(false)}
-              className="block rounded-md px-3 py-2 text-center text-xs font-medium text-muted transition-colors hover:bg-elevated hover:text-gold-soft"
+              className="block rounded-md px-3 py-2 text-center text-xs font-extrabold text-muted transition-colors hover:bg-elevated hover:text-gold-soft uppercase tracking-wider"
             >
               View all notifications
             </Link>
