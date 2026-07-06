@@ -24,6 +24,7 @@ import {
   PaymentAccountCard,
   AmountInput,
   RequestSuccess,
+  CopyButton,
 } from '@/components/shared/payment-components';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,15 +60,18 @@ export default function DepositPage() {
 
   // Form state
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
-  const [selectedAccountType, setSelectedAccountType] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
-  const [transactionReference, setTransactionReference] = useState('');
   const [senderAccountNumber, setSenderAccountNumber] = useState('');
+  const [transactionReference, setTransactionReference] = useState('');
   const [note, setNote] = useState('');
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [proofUploading, setProofUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+
+  // Flow control: false = Form stage (Screenshot 2), true = Verification stage (Screenshot 1)
+  const [showVerification, setShowVerification] = useState(false);
+  const [verificationTimeRemaining, setVerificationTimeRemaining] = useState(1200); // 20 minutes countdown
   const [successResponse, setSuccessResponse] = useState<DepositRequestResponse | null>(null);
 
   // Load accounts for the selected method
@@ -81,55 +85,54 @@ export default function DepositPage() {
 
   const depositMutation = useCreateDeposit();
 
-  // Derived state
   const selectedMethod = useMemo(
     () => methods?.find((m) => m.id === selectedMethodId) ?? null,
     [methods, selectedMethodId],
   );
-
-  // Distinct account types available for this method (e.g. personal, agent).
-  const accountTypes = useMemo(() => {
-    const set = new Set<string>();
-    (accounts ?? []).forEach((a) => {
-      if (a.accountType) set.add(a.accountType.toLowerCase());
-    });
-    return Array.from(set);
-  }, [accounts]);
-
-  const hasTypes = accountTypes.length > 0;
-
-  // NOTE: we intentionally do NOT auto-select a type — even when a method has only
-  // one type, the player must tap Personal/Agent to reveal the account + amount step.
-
-  // Accounts shown after the type filter (untyped methods show all).
-  const visibleAccounts = useMemo(() => {
-    if (!accounts) return [];
-    if (!hasTypes) return accounts;
-    if (!selectedAccountType) return [];
-    return accounts.filter((a) => (a.accountType?.toLowerCase() ?? '') === selectedAccountType);
-  }, [accounts, hasTypes, selectedAccountType]);
 
   const selectedAccount = useMemo(
     () => accounts?.find((a) => a.id === selectedAccountId) ?? null,
     [accounts, selectedAccountId],
   );
 
-  // Open the amount box as soon as a type is chosen: auto-select the first
-  // matching account (the player can still tap a different number to switch).
-  useEffect(() => {
-    if (visibleAccounts.length > 0 && !visibleAccounts.some((a) => a.id === selectedAccountId)) {
-      setSelectedAccountId(visibleAccounts[0].id);
-    }
-  }, [visibleAccounts, selectedAccountId]);
+  const isMobileMoney = useMemo(() => {
+    if (!selectedMethod) return false;
+    const name = selectedMethod.name.toLowerCase();
+    return name.includes('bkash') || name.includes('nagad') || name.includes('rocket') || name.includes('upay');
+  }, [selectedMethod]);
 
-  // Limits come from the SELECTED ACCOUNT. Max 0 = unlimited (Agent); min falls
-  // back to the method minimum when the account has none set.
-  const accountMaxMinor = selectedAccount?.maxLimitMinor ?? 0; // 0 = unlimited
-  const minMinor =
-    (selectedAccount?.minLimitMinor ?? 0) > 0
-      ? selectedAccount!.minLimitMinor
-      : selectedMethod?.minDepositMinor ?? 0;
+  // Auto-select first account when method changes
+  useEffect(() => {
+    if (accounts && accounts.length > 0) {
+      setSelectedAccountId(accounts[0].id);
+    }
+  }, [accounts]);
+
+  // Countdown timer for verification screen
+  useEffect(() => {
+    if (!showVerification || successResponse) return;
+    const timer = setInterval(() => {
+      setVerificationTimeRemaining((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setShowVerification(false);
+          return 1200;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [showVerification, successResponse]);
+
+  const formatTimer = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const currency = selectedMethod?.currency ?? 'BDT';
+  const minMinor = selectedAccount?.minLimitMinor ?? selectedMethod?.minDepositMinor ?? 10000;
+  const maxMinor = selectedAccount?.maxLimitMinor ?? 5000000;
 
   // Validation
   const amountError = useMemo(() => {
@@ -137,39 +140,33 @@ export default function DepositPage() {
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) return 'Enter a valid amount';
     const minor = Math.round(parsed * 100);
-    if (minMinor > 0 && minor < minMinor) return `Minimum is ${formatCurrency(minMinor, currency)}`;
-    if (accountMaxMinor > 0 && minor > accountMaxMinor)
-      return `Maximum for this account is ${formatCurrency(accountMaxMinor, currency)}`;
+    if (minMinor > 0 && minor < minMinor) return `Minimum BDT ${minMinor / 100}`;
+    if (maxMinor > 0 && minor > maxMinor) return `Maximum BDT ${maxMinor / 100}`;
     return null;
-  }, [amount, minMinor, accountMaxMinor, currency]);
+  }, [amount, minMinor, maxMinor]);
 
-  const canSubmit =
+  const canProceedToVerify =
     selectedMethodId &&
     selectedAccountId &&
     amount &&
     !amountError &&
+    senderAccountNumber.trim();
+
+  const canSubmitDeposit =
+    canProceedToVerify &&
     transactionReference.trim() &&
-    senderAccountNumber.trim() &&
     !proofUploading &&
     !depositMutation.isPending;
 
-  // Handlers
   function selectMethod(id: string) {
     setSelectedMethodId(id);
-    setSelectedAccountType(null);
     setSelectedAccountId(null);
     setAmount('');
   }
 
-  function selectType(t: string) {
-    setSelectedAccountType(t);
-    setSelectedAccountId(null);
-    setAmount('');
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleVerificationSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit || !selectedMethod) return;
+    if (!canSubmitDeposit || !selectedMethod) return;
 
     let proofAssetId: string | undefined;
     if (proofFile) {
@@ -213,13 +210,13 @@ export default function DepositPage() {
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" /> Back
           </button>
         </div>
         <RequestSuccess
-          title={t('deposit.submitted')}
+          title="ডিপোজিট সফলভাবে জমা হয়েছে!"
           response={successResponse}
           type="deposit"
           onDone={() => router.push('/player/wallet')}
@@ -244,7 +241,7 @@ export default function DepositPage() {
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Wallet
           </button>
@@ -264,7 +261,7 @@ export default function DepositPage() {
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" /> Back to Wallet
           </button>
@@ -276,241 +273,489 @@ export default function DepositPage() {
 
   return (
     <PageContainer>
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          onClick={() => router.push('/player/wallet')}
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border hover:bg-elevated"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <ArrowDownToLine className="h-6 w-6 text-brand" />
-            Deposit
-          </h1>
-          <p className="text-sm text-muted">{t('deposit.subtitle')}</p>
+      {/* Tabbed Header: Deposit / Withdraw */}
+      <div className="mb-6 border-b border-[#1d1f24] flex justify-center">
+        <div className="flex gap-4">
+          <button
+            type="button"
+            className="border-b-2 border-[var(--brand)] px-4 py-2.5 text-sm font-extrabold uppercase text-[var(--brand)]"
+          >
+            ডিপোজিট (Deposit)
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/player/withdraw')}
+            className="px-4 py-2.5 text-sm font-bold uppercase text-gray-400 hover:text-white transition-colors"
+          >
+            উইথড্র (Withdraw)
+          </button>
         </div>
       </div>
 
-      {/* Live status of the player's own recent deposits (under verification → approved/rejected) */}
       <DepositStatusTracker />
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {/* Step 1: Payment Method */}
-        <Step index={1} title={t('deposit.step1')}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {methods.map((method) => (
-              <PaymentMethodCard
-                key={method.id}
-                method={method}
-                flow="deposit"
-                selected={selectedMethodId === method.id}
-                onSelect={() => selectMethod(method.id)}
-              />
-            ))}
+      {!showVerification ? (
+        /* ─── STAGE 1: DEPOSIT METHOD & AMOUNT FORM (Screenshot 2) ─── */
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Orange promo banner */}
+          <div className="rounded-lg bg-gradient-to-r from-amber-600 to-orange-500 px-4 py-2.5 text-xs font-black text-black flex items-center justify-between shadow-md">
+            <span>● প্রচার নির্বাচন করুন ৫% আনলিমিটেড ডিপোজিট বোনাস</span>
+            <span className="bg-black/20 px-2 py-0.5 rounded text-[10px]">Active</span>
           </div>
-        </Step>
 
-        {/* Step 2: Account Type (Personal / Agent) */}
-        {selectedMethodId && hasTypes && (
-          <Step index={2} title={t('deposit.step2')}>
-            <div className="grid grid-cols-2 gap-3">
-              {accountTypes.map((acctType) => {
-                const active = selectedAccountType === acctType;
-                const isAgent = acctType === 'agent';
+          {/* Payment Methods */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">১. পেমেন্ট পদ্ধতি (Select Gateway)</h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {methods.map((method) => {
+                const active = selectedMethodId === method.id;
+                const isbKash = method.name.toLowerCase().includes('bkash');
+                const isNagad = method.name.toLowerCase().includes('nagad');
+                const isRocket = method.name.toLowerCase().includes('rocket');
+                const isUpay = method.name.toLowerCase().includes('upay');
+                
+                const logo = method.iconUrl || (isbKash ? '/assets/logo-bkash.png' : isNagad ? '/assets/nagad_logo.png' : isRocket ? '/assets/rocket_logo.png' : isUpay ? '/assets/upay.webp' : null);
+
                 return (
                   <button
-                    key={acctType}
+                    key={method.id}
                     type="button"
-                    onClick={() => selectType(acctType)}
+                    onClick={() => selectMethod(method.id)}
                     className={cn(
-                      'flex flex-col items-center gap-1 rounded-xl border px-4 py-4 text-center transition-all',
+                      'relative flex flex-col items-center justify-center rounded-xl border p-4 transition-all h-[80px]',
                       active
-                        ? 'border-brand/60 bg-brand/5'
-                        : 'border-border hover:border-brand/40 hover:bg-elevated/50',
+                        ? 'border-[var(--brand)] bg-[#202124] shadow-lg shadow-[var(--brand)]/5'
+                        : 'border-[#2d3035] bg-[#1a1b1e] hover:border-gray-600',
                     )}
                   >
-                    <span className="flex items-center gap-1.5 text-base font-semibold capitalize">
-                      {isAgent ? <InfinityIcon className="h-4 w-4 text-gold-soft" /> : <ShieldCheck className="h-4 w-4 text-brand" />}
-                      {acctType} Account
-                    </span>
-                    <span className="text-xs text-muted">
-                      {isAgent ? t('deposit.unlimited') : t('deposit.standardLimit')}
-                    </span>
+                    <span className="absolute top-1 right-1 bg-rose-600 text-white font-black text-[7px] px-1 py-0.5 rounded tracking-wide">+PRIZE</span>
+                    {logo ? (
+                      <img src={logo} alt={method.name} className="max-h-8 w-auto object-contain" />
+                    ) : (
+                      <span className="font-bold text-xs">{method.name}</span>
+                    )}
+                    <span className="text-[10px] text-gray-400 mt-1 font-bold">{method.name}</span>
                   </button>
                 );
               })}
             </div>
-          </Step>
-        )}
+          </div>
 
-        {/* Step 3: Destination Account */}
-        {selectedMethodId && (!hasTypes || selectedAccountType) && (
-          <Step index={hasTypes ? 3 : 2} title={t('deposit.step3')}>
-            {accountsLoading ? (
-              <LoadingState message="Loading accounts…" />
-            ) : visibleAccounts.length > 0 ? (
-              <>
-                <p className="mb-3 text-xs text-muted">
-                  Send your payment to the number below, then enter the amount and your transaction reference.
-                </p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {visibleAccounts.map((account) => (
-                    <PaymentAccountCard
-                      key={account.id}
-                      account={account}
-                      currency={currency}
-                      selected={selectedAccountId === account.id}
-                      onSelect={() => setSelectedAccountId(account.id)}
-                    />
-                  ))}
-                </div>
-
-                {/* Amount form lives in THIS step so users can't miss it. */}
-                {selectedMethod && selectedAccount && (
-                  <Card className="mt-5">
-                    <p className="px-6 pt-5 text-sm font-semibold">{t('deposit.selectAmount')}</p>
-                    <CardContent className="flex flex-col gap-4 p-6">
-                {/* Limit summary for the chosen account */}
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-elevated/60 px-4 py-3 text-sm">
-                  <div>
-                    <span className="text-muted">Min: </span>
-                    <span className="font-semibold">{formatCurrency(minMinor, currency)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-muted">Max: </span>
-                    {accountMaxMinor > 0 ? (
-                      <span className="font-semibold">{formatCurrency(accountMaxMinor, currency)}</span>
-                    ) : (
-                      <span className="flex items-center gap-1 font-semibold text-success">
-                        <InfinityIcon className="h-4 w-4" /> Unlimited
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick-pick amounts (within this account's limits) */}
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-                  {QUICK_AMOUNTS.filter((a) => {
-                    const minor = a * 100;
-                    return (minMinor === 0 || minor >= minMinor) && (accountMaxMinor === 0 || minor <= accountMaxMinor);
-                  }).map((a) => (
+          {/* Channels Selector */}
+          {selectedMethodId && accounts && accounts.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">২. ডিপোজিট চ্যানেল (Select Channel)</h3>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {accounts.map((acct) => {
+                  const active = selectedAccountId === acct.id;
+                  const label = acct.displayName || `${acct.accountType === 'agent' ? 'AP-ক্যাশ আউট' : 'SP-সেন্ড মানি'}`;
+                  return (
                     <button
-                      key={a}
+                      key={acct.id}
                       type="button"
-                      onClick={() => setAmount(String(a))}
+                      onClick={() => setSelectedAccountId(acct.id)}
                       className={cn(
-                        'rounded-md border px-2 py-2.5 text-sm font-semibold transition-colors',
-                        amount === String(a)
-                          ? 'border-gold-soft bg-gold-soft/10 text-gold-soft'
-                          : 'border-border bg-elevated text-base hover:border-gold-soft/40',
+                        'rounded-lg border py-2.5 text-xs font-bold text-center transition-colors',
+                        active
+                          ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
+                          : 'border-[#2d3035] bg-[#1a1b1e] hover:border-gray-600 text-gray-300'
                       )}
                     >
-                      {a.toLocaleString('en-US')}
+                      {label}
                     </button>
-                  ))}
-                </div>
-                <AmountInput
-                  label={t('deposit.exactAmount')}
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Amount Options & Input */}
+          {selectedAccountId && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">৩. এমাউন্ট (Select/Enter Amount)</h3>
+              
+              {/* Target limit range */}
+              <div className="text-right text-xs text-gray-500 font-mono">
+                সীমা: ৳{(minMinor / 100).toLocaleString()} - ৳{(maxMinor / 100).toLocaleString()}
+              </div>
+
+              {/* Quick buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                {[2000, 5000, 10000, 15000, 20000, 30000, 1000, 100].map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setAmount(String(val))}
+                    className={cn(
+                      'rounded border py-2 text-xs font-bold transition-all',
+                      amount === String(val)
+                        ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
+                        : 'border-[#2d3035] bg-[#1a1b1e] text-gray-300 hover:border-gray-600'
+                    )}
+                  >
+                    {val.toLocaleString('bn-BD')}
+                  </button>
+                ))}
+              </div>
+
+              {/* Exact amount input */}
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">৳</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
                   value={amount}
-                  onChange={setAmount}
-                  currency={currency}
-                  min={minMinor}
-                  max={accountMaxMinor > 0 ? accountMaxMinor : undefined}
-                  error={amountError}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-[#2d3035] bg-[#1a1b1e] py-3 pl-8 pr-12 text-sm font-bold text-white focus:border-[var(--brand)] focus:outline-none"
                 />
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted">
-                    {t('deposit.txRef')} <span className="text-danger">*</span>
-                  </label>
-                  <Input
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">BDT</span>
+              </div>
+              {amountError && <p className="text-xs text-rose-500 font-bold">{amountError}</p>}
+
+              {/* Sender Account Phone Number */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400">পেমেন্ট পাঠানোর জন্য ব্যবহৃত নম্বর (Your Phone Number) <span className="text-rose-500">*</span></label>
+                <input
+                  type="tel"
+                  placeholder="017XXXXXXXX"
+                  value={senderAccountNumber}
+                  onChange={(e) => setSenderAccountNumber(e.target.value)}
+                  className="w-full rounded-lg border border-[#2d3035] bg-[#1a1b1e] py-3 px-4 text-sm font-semibold text-white focus:border-[var(--brand)] focus:outline-none"
+                  required
+                />
+              </div>
+
+              {/* Optional note */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-400">নোট (Optional Note)</label>
+                <input
+                  type="text"
+                  placeholder="নোট লিখুন"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="w-full rounded-lg border border-[#2d3035] bg-[#1a1b1e] py-3 px-4 text-sm font-semibold text-white focus:border-[var(--brand)] focus:outline-none"
+                />
+              </div>
+
+              {/* Guidelines Box */}
+              <div className="rounded-xl border border-amber-500/20 bg-amber-950/10 p-4 text-[11px] leading-relaxed text-gray-400 space-y-2">
+                <p className="font-extrabold text-amber-400">⚠️ নির্দেশাবলী (Important Guidelines):</p>
+                <ol className="list-decimal space-y-1.5 pl-4 font-medium">
+                  <li>ক্যাশ আউট বা সেন্ডমানি করার আগে &apos;ব্যক্তিগত তথ্য&apos; অংশে সর্বোচ্চ ৫টি মোবাইল নম্বর যোগ করে ভেরিফাই করুন।</li>
+                  <li>অনুগ্রহ করে পেমেন্ট পাঠানোর জন্য ব্যবহৃত নম্বরটি নির্বাচন করুন, আপনার ট্রানজেকশন আইডি প্রবেশ করান এবং সাবমিট করুন। ভুল নম্বর নির্বাচন করলে যাচাইকরণ ব্যর্থ হবে।</li>
+                  <li>যেকোনো ডিপোজিট করার আগে সবসময় আমাদের ডিপোজিট পেজের নাম্বার চেক করুন।</li>
+                  <li>ডিপোজিট পেন্ডিং অবস্থায় আপনি সর্বোচ্চ ২টি ডিপোজিট ট্রাই করতে পারবেন। কোনো সমস্যা হলে অনুগ্রহ করে লাইভচ্যাটের মাধ্যমে সহায়তা নিন।</li>
+                  <li>বাজির ODDS অবশ্যই ১.৩০-এর উপরে হতে হবে। এর নিচের অডসে এ রাখা বাজি উইথড্র টার্নওভারের জন্য গণনা করা হবে না।</li>
+                </ol>
+              </div>
+
+              {/* Proceed to Verification Button */}
+              <Button
+                type="button"
+                disabled={!canProceedToVerify}
+                onClick={() => {
+                  setVerificationTimeRemaining(1200);
+                  setShowVerification(true);
+                }}
+                className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-extrabold text-sm uppercase rounded-xl tracking-wider shadow-lg active:scale-95 transition-all"
+              >
+                সাবমিট (Submit)
+              </Button>
+            </div>
+          )}
+        </div>
+      ) : isMobileMoney ? (
+        /* ─── STAGE 2: MOBILE MONEY TRANSACTION VERIFICATION SCREEN (bKash/Nagad/Rocket/UPay) ─── */
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Side Form Column */}
+          <div className="md:col-span-7 bg-[#1a1b1e] border border-[#2d3035] rounded-2xl p-5 sm:p-6 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-[#2d3035]">
+              <span className="text-sm font-extrabold uppercase text-[var(--brand)]">টাকা পাঠানোর নির্দেশাবলী</span>
+              {selectedMethod && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-400 capitalize">{selectedMethod.name}</span>
+                  {(selectedMethod.iconUrl || 
+                    (selectedMethod.name.toLowerCase().includes('bkash') ||
+                     selectedMethod.name.toLowerCase().includes('nagad') ||
+                     selectedMethod.name.toLowerCase().includes('rocket') ||
+                     selectedMethod.name.toLowerCase().includes('upay'))) && (
+                    <img 
+                      src={selectedMethod.iconUrl || 
+                           (selectedMethod.name.toLowerCase().includes('bkash') ? '/assets/logo-bkash.png' :
+                            selectedMethod.name.toLowerCase().includes('nagad') ? '/assets/nagad_logo.png' :
+                            selectedMethod.name.toLowerCase().includes('rocket') ? '/assets/rocket_logo.png' :
+                            '/assets/upay.webp')} 
+                      alt={selectedMethod.name} 
+                      className="h-6 w-auto object-contain" 
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-400 font-bold leading-relaxed">
+              Send Money to the account below and fill in the required information / নীচের অ্যাকাউন্ট নাম্বারে সেন্ড মানি করুন এবং প্রয়োজনীয় তথ্য পূরণ করুন
+            </p>
+
+            {/* Amount display */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase">Amount (পরিমাণ)</label>
+              <div className="flex items-center justify-between bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5">
+                <span className="font-mono text-base font-extrabold text-white">{parseFloat(amount).toFixed(2)} BDT</span>
+                <CopyButton value={amount} label="কপি" className="border-none bg-[#32353b] hover:bg-[#40434b] text-gray-300" />
+              </div>
+            </div>
+
+            {/* Target wallet number */}
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase">
+                {selectedMethod?.name || 'Mobile'} Personal Wallet (বিকাশ পার্সোনাল ওয়ালেট)
+              </label>
+              <div className="flex items-center justify-between bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5">
+                <span className="font-mono text-sm font-extrabold text-white">{selectedAccount?.accountNumberMasked || '01XXXXXXXXX'}</span>
+                <CopyButton value={selectedAccount?.accountNumberMasked || ''} label="কপি" className="border-none bg-[#32353b] hover:bg-[#40434b] text-gray-300" />
+              </div>
+              <p className="text-[10px] text-gray-500 font-bold">ছোট্ট এজেন্ট নম্বরটি কপি করতে কপি বাটনে ক্লিক করুন।</p>
+            </div>
+
+            <form onSubmit={handleVerificationSubmit} className="space-y-4">
+              {/* Transaction ID Input */}
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-gray-400 uppercase flex items-center gap-1">
+                  Transaction ID (ট্রানজেকশন আইডি) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
                     type="text"
+                    placeholder="উদাহরণ: ODM2JXXXXX"
                     value={transactionReference}
                     onChange={(e) => setTransactionReference(e.target.value)}
-                    placeholder={t('deposit.txRefPlaceholder')}
-                    maxLength={128}
+                    className="w-full rounded-lg border border-[#2d3035] bg-black/40 py-3 px-4 text-sm font-mono text-white focus:border-[var(--brand)] focus:outline-none"
                     required
                   />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 cursor-help" title="Transaction ID is available in your SMS confirmation or statements.">❓</span>
                 </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted">
-                    {t('deposit.senderAcct')} <span className="text-danger">*</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={senderAccountNumber}
-                    onChange={(e) => setSenderAccountNumber(e.target.value)}
-                    placeholder={t('deposit.senderPlaceholder')}
-                    maxLength={120}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted">
-                    {t('deposit.proofLabel')} <span className="text-muted">{t('deposit.optional')}</span>
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
-                    className="block w-full cursor-pointer text-sm text-muted file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-border file:bg-elevated file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white file:transition-colors hover:file:border-gold-soft/50 hover:file:bg-base"
-                  />
-                  <p className="mt-1 text-xs text-muted">{proofUploading ? t('deposit.uploading') : t('deposit.proofHint')}</p>
-                  {uploadErr && <p className="mt-1 text-xs text-danger">{uploadErr}</p>}
-                </div>
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted">
-                    {t('deposit.note')} <span className="text-muted">{t('deposit.optional')}</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    placeholder={t('deposit.notePlaceholder')}
-                  />
-                </div>
-
-                {/* Gentle reminder (reference style) */}
-                <div className="rounded-md border border-gold-soft/20 bg-gold-soft/5 p-3 text-xs leading-relaxed text-muted">
-                  <p className="mb-1 font-bold text-gold-soft">{t('deposit.reminder')}</p>
-                  <ol className="list-decimal space-y-0.5 pl-4">
-                    <li>{t('deposit.rem1')}</li>
-                    <li>{t('deposit.rem2')}</li>
-                    <li>{t('deposit.rem3')}</li>
-                  </ol>
-                </div>
-                    </CardContent>
-                  </Card>
+                {!transactionReference.trim() && (
+                  <p className="text-[10px] text-rose-500 font-bold">Transaction reference is required</p>
                 )}
-              </>
-            ) : (
-              <EmptyState message="No accounts available for this selection." />
+              </div>
+
+              {/* Upload Proof */}
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-gray-400">ডিপোজিট প্রমাণ ফাইল (Upload Proof - Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                  className="block w-full text-xs text-gray-400 file:mr-3 file:rounded-md file:border-none file:bg-[#32353b] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#40434b]"
+                />
+                {proofUploading && <p className="text-[10px] text-amber-500 animate-pulse">Uploading proof image...</p>}
+                {uploadErr && <p className="text-[10px] text-rose-500">{uploadErr}</p>}
+              </div>
+
+              {depositMutation.isError && (
+                <p className="text-xs text-rose-500 font-bold">
+                  {depositMutation.error instanceof ApiRequestError ? depositMutation.error.message : 'Error submitting deposit.'}
+                </p>
+              )}
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowVerification(false)}
+                  className="w-full py-3 bg-[#32353b] hover:bg-[#40434b] text-white font-bold text-xs uppercase rounded-lg transition-all"
+                >
+                  ফিরে যান (Back)
+                </button>
+                <Button
+                  type="submit"
+                  disabled={!canSubmitDeposit || depositMutation.isPending}
+                  className="w-full py-3 bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-700 hover:to-rose-600 text-white font-extrabold text-xs uppercase rounded-lg shadow-lg active:scale-95 transition-all border-none"
+                >
+                  {depositMutation.isPending ? 'জমা হচ্ছে…' : 'সাবমিট করুন'}
+                </Button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Side Info Column (Countdown & Illustration) */}
+          <div className="md:col-span-5 space-y-6">
+            {/* Time remaining countdown banner */}
+            <div className="bg-rose-950/40 border border-rose-500/20 rounded-2xl p-5 text-center space-y-1 shadow-md">
+              <span className="block text-2xl font-mono font-extrabold text-rose-500 tracking-wider">
+                {formatTimer(verificationTimeRemaining)}
+              </span>
+              <span className="block text-xs font-bold text-gray-400">Time Remaining</span>
+              <span className="block text-[10px] text-rose-400 font-bold">(এই সময়ের মধ্যে সম্পন্ন করুন)</span>
+            </div>
+
+            {/* Explanatory illustration graphic */}
+            <div className="bg-[#1a1b1e] border border-[#2d3035] rounded-2xl p-6 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="relative w-full max-w-[200px] aspect-[9/16] bg-gradient-to-b from-pink-600 to-pink-800 rounded-3xl border-4 border-zinc-800 shadow-xl overflow-hidden flex flex-col items-center p-4">
+                <div className="w-12 h-4 bg-zinc-800 rounded-b-xl absolute top-0" />
+                <div className="mt-8 flex flex-col items-center space-y-4 w-full">
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-pink-700 font-black text-xl">৳</div>
+                  <span className="text-white font-extrabold text-xs">Send Money</span>
+                  <div className="w-full bg-white/10 rounded-lg p-2 text-center text-[8px] text-white/80 font-bold border border-white/10">
+                    Enter Name or Number
+                  </div>
+                  <div className="w-full bg-white/20 rounded-lg py-2.5 text-center text-[9px] text-white font-black animate-pulse">
+                    Tap & Hold to Send
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-xs font-black text-white uppercase">{selectedMethod?.name || 'Mobile'} অ্যাপ দিয়ে টাকা পাঠান</h4>
+                <p className="text-[10px] text-gray-500 font-medium">আপনার পেমেন্ট অ্যাপ ব্যবহার করে উপরের পার্সোনাল নম্বরে টাকা পাঠান এবং লেনদেনের শেষে প্রাপ্ত ট্রানজেকশন আইডিটি ফর্মে লিখুন।</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      ) : (
+        /* ─── STAGE 2: STANDARD TRANSACTION VERIFICATION SCREEN (Bank/Crypto/Other) ─── */
+        <div className="max-w-2xl mx-auto bg-[#1a1b1e] border border-[#2d3035] rounded-2xl p-6 space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-[#2d3035]">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span>Payment Details</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-[var(--brand)]/20 text-[var(--brand)] capitalize">
+                {selectedMethod?.name}
+              </span>
+            </h2>
+            {selectedMethod?.iconUrl && (
+              <img src={selectedMethod.iconUrl} alt={selectedMethod.name} className="h-6 w-auto object-contain" />
             )}
-          </Step>
-        )}
+          </div>
 
-        {/* Error / Submit */}
-        {depositMutation.isError && (
-          <Card className="border-danger/30 bg-danger/5">
-            <CardContent className="p-4">
-              <p className="text-sm text-danger">
-                {depositMutation.error instanceof ApiRequestError
-                  ? depositMutation.error.message
-                  : 'Failed to submit deposit. Please try again.'}
+          <p className="text-sm text-gray-400">
+            Please make your transfer to the destination account below, then input your transaction reference/ID to complete the deposit.
+          </p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* Amount */}
+            <div className="space-y-1">
+              <span className="block text-[11px] font-bold text-gray-500 uppercase">Amount</span>
+              <div className="bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5 flex items-center justify-between">
+                <span className="font-mono text-base font-extrabold text-white">
+                  {parseFloat(amount).toLocaleString()} {currency}
+                </span>
+                <CopyButton value={amount} label="Copy" className="border-none bg-[#32353b] hover:bg-[#40434b] text-gray-300" />
+              </div>
+            </div>
+
+            {/* Target Address/Account */}
+            <div className="space-y-1">
+              <span className="block text-[11px] font-bold text-gray-500 uppercase">
+                {selectedMethod?.name.toLowerCase().includes('usdt') ? 'Wallet Address' : 'Account Number'}
+              </span>
+              <div className="bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5 flex items-center justify-between">
+                <span className="font-mono text-sm font-extrabold text-white break-all pr-2">
+                  {selectedAccount?.accountNumberMasked}
+                </span>
+                <CopyButton value={selectedAccount?.accountNumberMasked || ''} label="Copy" className="border-none bg-[#32353b] hover:bg-[#40434b] text-gray-300" />
+              </div>
+            </div>
+
+            {/* Account Holder Name */}
+            {selectedAccount?.accountHolderName && (
+              <div className="space-y-1">
+                <span className="block text-[11px] font-bold text-gray-500 uppercase">Account Holder</span>
+                <div className="bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5">
+                  <span className="text-sm font-semibold text-white">{selectedAccount.accountHolderName}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Account Display Name / Type */}
+            {selectedAccount?.displayName && (
+              <div className="space-y-1">
+                <span className="block text-[11px] font-bold text-gray-500 uppercase">Account Label</span>
+                <div className="bg-black/40 border border-[#2d3035] rounded-lg px-4 py-2.5">
+                  <span className="text-sm font-semibold text-white">{selectedAccount.displayName}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* QR Code */}
+          {selectedAccount?.qrCodeUrl && (
+            <div className="flex flex-col items-center justify-center border border-[#2d3035] bg-black/20 rounded-xl p-4 space-y-2">
+              <span className="text-xs font-bold text-gray-400">Scan QR Code to Pay</span>
+              <img src={selectedAccount.qrCodeUrl} alt="QR Code" className="w-48 h-48 object-contain rounded-lg border border-white/10 bg-white p-2" />
+            </div>
+          )}
+
+          {/* Instructions */}
+          {selectedAccount?.instructions && (
+            <div className="bg-amber-950/10 border border-amber-500/20 rounded-xl p-4">
+              <span className="block text-xs font-bold text-amber-400 mb-1">Instructions:</span>
+              <p className="text-xs text-gray-400 leading-relaxed">{selectedAccount.instructions}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleVerificationSubmit} className="space-y-4 pt-2 border-t border-[#2d3035]">
+            {/* Transaction ID Input */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-300">
+                Transaction ID / Hash / Reference <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter transaction reference"
+                value={transactionReference}
+                onChange={(e) => setTransactionReference(e.target.value)}
+                className="w-full rounded-lg border border-[#2d3035] bg-black/40 py-3 px-4 text-sm font-semibold text-white focus:border-[var(--brand)] focus:outline-none"
+                required
+              />
+            </div>
+
+            {/* Upload Proof */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-gray-300">Upload Receipt / Proof (Optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setProofFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-xs text-gray-400 file:mr-3 file:rounded-md file:border-none file:bg-[#32353b] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#40434b]"
+              />
+              {proofUploading && <p className="text-[10px] text-amber-500 animate-pulse">Uploading proof image...</p>}
+              {uploadErr && <p className="text-[10px] text-rose-500">{uploadErr}</p>}
+            </div>
+
+            {depositMutation.isError && (
+              <p className="text-xs text-rose-500 font-bold">
+                {depositMutation.error instanceof ApiRequestError ? depositMutation.error.message : 'Error submitting deposit.'}
               </p>
-            </CardContent>
-          </Card>
-        )}
+            )}
 
-        {selectedMethod && selectedAccount && (
-          <Button type="submit" disabled={!canSubmit} className="w-full text-base">
-            {depositMutation.isPending ? t('deposit.submitting') : t('deposit.submit')}
-          </Button>
-        )}
-      </form>
+            {/* Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowVerification(false)}
+                className="w-full py-3 bg-[#32353b] hover:bg-[#40434b] text-white font-bold text-xs uppercase rounded-lg transition-all"
+              >
+                Back
+              </button>
+              <Button
+                type="submit"
+                disabled={!canSubmitDeposit || depositMutation.isPending}
+                className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-extrabold text-xs uppercase rounded-lg shadow-lg active:scale-95 transition-all border-none"
+              >
+                {depositMutation.isPending ? 'Submitting…' : 'Submit Deposit'}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
     </PageContainer>
   );
 }
+
+
 
 /** Approved confirmation is transient (positive, no action needed). Rejected stays
  *  much longer so the player reliably reads WHY it was rejected. */

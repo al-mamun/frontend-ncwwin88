@@ -5,13 +5,16 @@
  */
 'use client';
 
-import { useState, useMemo } from 'react';
+
+
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowUpFromLine } from 'lucide-react';
 import {
   useWallet,
   usePaymentMethods,
   useCreateWithdrawal,
+  useProfile,
 } from '@/hooks/player-hooks';
 import { PageContainer, LoadingState, ErrorState, EmptyState, ConfirmDialog } from '@/components/shared';
 import {
@@ -36,8 +39,17 @@ function generateIdempotencyKey(): string {
   return `wd_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
-/** Quick-pick amounts (reference style); filtered to method limits + available balance. */
-const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000];
+// Convert digits to Bengali numerals
+function toBengaliNumerals(num: string | number): string {
+  const digitsMap: Record<string, string> = {
+    '0': '০', '1': '১', '2': '২', '3': '৩', '4': '৪',
+    '5': '৫', '6': '৬', '7': '৭', '8': '৮', '9': '৯',
+    '.': '.',
+  };
+  return String(num).split('').map(char => digitsMap[char] || char).join('');
+}
+
+const QUICK_AMOUNTS = [300, 1000, 2000, 5000, 10000, 15000, 20000, 25000];
 
 export default function WithdrawPage() {
   const router = useRouter();
@@ -45,6 +57,7 @@ export default function WithdrawPage() {
 
   // Data queries
   const { data: wallet, isLoading: walletLoading, isError: walletError, refetch: refetchWallet } = useWallet();
+  const { data: profile } = useProfile();
   const {
     data: methods,
     isLoading: methodsLoading,
@@ -56,49 +69,64 @@ export default function WithdrawPage() {
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
+  
+  // Custom number input active state
+  const [useCustomNumber, setUseCustomNumber] = useState(false);
+  const [customNumberInput, setCustomNumberInput] = useState('');
+
   const [showConfirm, setShowConfirm] = useState(false);
   const [successResponse, setSuccessResponse] = useState<WithdrawalRequestResponse | null>(null);
 
   const withdrawMutation = useCreateWithdrawal();
 
-  // Derived state
   const selectedMethod = useMemo(
     () => methods?.find((m) => m.id === selectedMethodId) ?? null,
     [methods, selectedMethodId],
   );
 
+  // Auto-select first method
+  useEffect(() => {
+    if (methods && methods.length > 0) {
+      setSelectedMethodId(methods[0].id);
+    }
+  }, [methods]);
+
+  // Set default selected phone number from profile
+  useEffect(() => {
+    if (profile?.phone && !useCustomNumber) {
+      setAccountNumber(profile.phone);
+    }
+  }, [profile, useCustomNumber]);
+
   const availableBalance = wallet ? wallet.balanceMinor - wallet.heldMinor : 0;
+  const availableBalanceMain = (availableBalance / 100).toFixed(2);
 
   // Validation
   const amountError = useMemo(() => {
     if (!amount) return null;
     const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0) return locale === 'bn' ? '0-এর বেশি একটি বৈধ পরিমাণ লিখুন' : 'Enter a valid amount greater than 0';
+    if (isNaN(parsed) || parsed <= 0) return 'একটি বৈধ পরিমাণ লিখুন';
     const minor = Math.round(parsed * 100);
     if (wallet && minor > availableBalance)
-      return locale === 'bn'
-        ? `পর্যাপ্ত ব্যালেন্স নেই (${formatCurrency(availableBalance, wallet.currency)})`
-        : `Insufficient available balance (${formatCurrency(availableBalance, wallet.currency)})`;
+      return `পর্যাপ্ত ব্যালেন্স নেই (${toBengaliNumerals(availableBalanceMain)} BDT)`;
     if (selectedMethod) {
       if (minor < selectedMethod.minWithdrawalMinor)
-        return locale === 'bn'
-          ? `সর্বনিম্ন ${(selectedMethod.minWithdrawalMinor / 100).toFixed(2)} ${selectedMethod.currency}`
-          : `Minimum is ${(selectedMethod.minWithdrawalMinor / 100).toFixed(2)} ${selectedMethod.currency}`;
+        return `সর্বনিম্ন ৳${toBengaliNumerals(selectedMethod.minWithdrawalMinor / 100)}`;
       if (minor > selectedMethod.maxWithdrawalMinor)
-        return locale === 'bn'
-          ? `সর্বোচ্চ ${(selectedMethod.maxWithdrawalMinor / 100).toFixed(2)} ${selectedMethod.currency}`
-          : `Maximum is ${(selectedMethod.maxWithdrawalMinor / 100).toFixed(2)} ${selectedMethod.currency}`;
+        return `সর্বোচ্চ ৳${toBengaliNumerals(selectedMethod.maxWithdrawalMinor / 100)}`;
     }
     return null;
-  }, [amount, wallet, selectedMethod, availableBalance]);
+  }, [amount, wallet, selectedMethod, availableBalance, availableBalanceMain]);
+
+  const resolvedAccountNumber = useCustomNumber ? customNumberInput.trim() : accountNumber;
 
   const canSubmit =
     selectedMethodId &&
     amount &&
     !amountError &&
+    resolvedAccountNumber.trim() &&
     !withdrawMutation.isPending;
 
-  // Handlers
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit || !selectedMethod || !wallet) return;
@@ -116,7 +144,7 @@ export default function WithdrawPage() {
           paymentMethodId: selectedMethodId!,
           amount: minor,
           currency: selectedMethod.currency,
-          accountNumber: accountNumber.trim() || undefined,
+          accountNumber: resolvedAccountNumber,
         },
         idempotencyKey: generateIdempotencyKey(),
       },
@@ -133,13 +161,13 @@ export default function WithdrawPage() {
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" /> {locale === 'bn' ? 'পিছনে' : 'Back'}
+            <ArrowLeft className="h-4 w-4" /> পিছনে
           </button>
         </div>
         <RequestSuccess
-          title={locale === 'bn' ? 'উত্তোলনের অনুরোধ জমা হয়েছে!' : 'Withdrawal Submitted!'}
+          title="উত্তোলনের অনুরোধ সফলভাবে জমা হয়েছে!"
           response={successResponse}
           type="withdrawal"
           onDone={() => router.push('/player/wallet')}
@@ -152,7 +180,7 @@ export default function WithdrawPage() {
   if (walletLoading || methodsLoading) {
     return (
       <PageContainer>
-        <LoadingState message={locale === 'bn' ? 'উত্তোলনের বিকল্পগুলি লোড হচ্ছে…' : 'Loading withdrawal options…'} />
+        <LoadingState message="উত্তোলনের বিকল্পগুলি লোড হচ্ছে…" />
       </PageContainer>
     );
   }
@@ -164,189 +192,242 @@ export default function WithdrawPage() {
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" /> {locale === 'bn' ? 'ওয়ালেটে ফিরে যান' : 'Back to Wallet'}
+            <ArrowLeft className="h-4 w-4" /> ওয়ালেটে ফিরে যান
           </button>
         </div>
-        <ErrorState message={locale === 'bn' ? 'উত্তোলনের তথ্য লোড করা যায়নি।' : 'Unable to load withdrawal information.'} />
+        <ErrorState message="উত্তোলনের তথ্য লোড করা যায়নি।" />
         <div className="mt-4 flex justify-center gap-2">
-          <Button onClick={() => refetchWallet()}>{locale === 'bn' ? 'ওয়ালেট আবার চেষ্টা করুন' : 'Retry Wallet'}</Button>
-          <Button variant="secondary" onClick={() => refetchMethods()}>{locale === 'bn' ? 'পদ্ধতি আবার চেষ্টা করুন' : 'Retry Methods'}</Button>
+          <Button onClick={() => refetchWallet()}>ওয়ালেট আবার চেষ্টা করুন</Button>
+          <Button variant="secondary" onClick={() => refetchMethods()}>পদ্ধতি আবার চেষ্টা করুন</Button>
         </div>
       </PageContainer>
     );
   }
 
-  // Empty state — no withdrawal methods or no balance
+  // Empty state — no withdrawal methods
   if (methods.length === 0) {
     return (
       <PageContainer>
         <div className="mb-4">
           <button
             onClick={() => router.push('/player/wallet')}
-            className="flex items-center gap-2 text-sm text-muted hover:text-base"
+            className="flex items-center gap-2 text-sm text-gray-400 hover:text-white"
           >
-            <ArrowLeft className="h-4 w-4" /> {locale === 'bn' ? 'ওয়ালেটে ফিরে যান' : 'Back to Wallet'}
+            <ArrowLeft className="h-4 w-4" /> ওয়ালেটে ফিরে যান
           </button>
         </div>
-        <EmptyState message={locale === 'bn' ? 'বর্তমানে কোনো উত্তোলন পদ্ধতি উপলব্ধ নেই। অনুগ্রহ করে পরে আবার দেখুন।' : 'No withdrawal methods are currently available. Please check back later.'} />
+        <EmptyState message="বর্তমানে কোনো উত্তোলন পদ্ধতি উপলব্ধ নেই। অনুগ্রহ করে পরে আবার দেখুন।" />
       </PageContainer>
     );
   }
 
+  const minVal = selectedMethod ? selectedMethod.minWithdrawalMinor / 100 : 300;
+  const maxVal = selectedMethod ? selectedMethod.maxWithdrawalMinor / 100 : 25000;
+
   return (
     <PageContainer>
-      <div className="mb-6 flex items-center gap-3">
-        <button
-          onClick={() => router.push('/player/wallet')}
-          className="flex h-10 w-10 items-center justify-center rounded-lg border border-border hover:bg-elevated"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <ArrowUpFromLine className="h-6 w-6 text-brand" />
-            {locale === 'bn' ? 'উত্তোলন' : 'Withdraw'}
-          </h1>
-          <p className="text-sm text-muted">{locale === 'bn' ? 'আপনার ওয়ালেট থেকে টাকা তুলুন' : 'Cash out from your wallet'}</p>
+      {/* Tabbed Header: Deposit / Withdraw */}
+      <div className="mb-6 border-b border-[#1d1f24] flex justify-center">
+        <div className="flex gap-4">
+          <button
+            type="button"
+            onClick={() => router.push('/player/deposit')}
+            className="px-4 py-2.5 text-sm font-bold uppercase text-gray-400 hover:text-white transition-colors"
+          >
+            ডিপোজিট (Deposit)
+          </button>
+          <button
+            type="button"
+            className="border-b-2 border-[var(--brand)] px-4 py-2.5 text-sm font-extrabold uppercase text-[var(--brand)]"
+          >
+            উইথড্র (Withdraw)
+          </button>
         </div>
       </div>
 
-      {/* Available Balance Card */}
-      <Card className="mb-6 border-brand/30">
-        <CardContent className="p-5">
-          <p className="text-sm text-muted">{locale === 'bn' ? 'উপলব্ধ ব্যালেন্স' : 'Available Balance'}</p>
-          <p className="mt-1 text-3xl font-extrabold text-brand">
-            {formatCurrency(availableBalance, wallet.currency)}
-          </p>
-          {wallet.heldMinor > 0 && (
-            <p className="mt-1 text-sm text-warning">
-              {locale === 'bn'
-                ? `${formatCurrency(wallet.heldMinor, wallet.currency)} বিচারাধীন উত্তোলনে আটকে আছে`
-                : `${formatCurrency(wallet.heldMinor, wallet.currency)} held in pending withdrawals`}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <div className="max-w-2xl mx-auto space-y-6">
+        
+        {/* Main Balance Display */}
+        <div className="bg-[#1a1b1e] border border-[#2d3035] rounded-2xl p-5 text-center relative overflow-hidden">
+          <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">মেইন ওয়ালেট</span>
+          <span className="block text-4xl font-extrabold text-white mt-1 font-mono">
+            {toBengaliNumerals(availableBalanceMain)}
+          </span>
+          <span className="absolute right-4 bottom-4 text-xs font-bold text-gray-600">BDT</span>
+        </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-        {/* Step 1: Payment Method */}
-        <section>
-          <h2 className="mb-3 text-lg font-semibold">{locale === 'bn' ? '১. উত্তোলন পদ্ধতি নির্বাচন করুন' : '1. Choose Withdrawal Method'}</h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {methods.map((method) => (
-              <PaymentMethodCard
-                key={method.id}
-                method={method}
-                flow="withdrawal"
-                selected={selectedMethodId === method.id}
-                onSelect={() => setSelectedMethodId(method.id)}
-              />
-            ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Step 1: Payment Method */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">। পেমেন্ট পদ্ধতি</h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {methods.map((method) => {
+                const active = selectedMethodId === method.id;
+                
+                const isbKash = method.name.toLowerCase().includes('bkash');
+                const isNagad = method.name.toLowerCase().includes('nagad');
+                const isRocket = method.name.toLowerCase().includes('rocket');
+                const isUpay = method.name.toLowerCase().includes('upay');
+                
+                const logo = method.iconUrl || (isbKash ? '/assets/logo-bkash.png' : isNagad ? '/assets/nagad_logo.png' : isRocket ? '/assets/rocket_logo.png' : isUpay ? '/assets/upay.webp' : null);
+                
+                return (
+                  <button
+                    key={method.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMethodId(method.id);
+                      setAmount('');
+                    }}
+                    className={cn(
+                      'relative flex flex-col items-center justify-center rounded-xl border p-4 transition-all h-[80px]',
+                      active
+                        ? 'border-[var(--brand)] bg-[#202124] shadow-lg shadow-[var(--brand)]/5 text-[var(--brand)]'
+                        : 'border-[#2d3035] bg-[#1a1b1e] text-gray-400 hover:border-gray-600 hover:text-white',
+                    )}
+                  >
+                    {logo ? (
+                      <img src={logo} alt={method.name} className="max-h-8 w-auto object-contain" />
+                    ) : (
+                      <span className="text-sm font-bold tracking-wide">{method.name}</span>
+                    )}
+                    <span className="text-[10px] text-gray-400 mt-1 font-bold">{method.name}</span>
+                    {active && <span className="absolute bottom-1 right-2 text-xs font-bold">✓</span>}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </section>
 
-        {/* Step 2: Amount + Account Number */}
-        {selectedMethod && (
-          <section>
-            <h2 className="mb-3 text-lg font-semibold">{locale === 'bn' ? '২. উত্তোলনের বিবরণ লিখুন' : '2. Enter Withdrawal Details'}</h2>
-            <Card>
-              <CardContent className="flex flex-col gap-4 p-6">
-                <LimitInfo
-                  min={selectedMethod.minWithdrawalMinor}
-                  max={selectedMethod.maxWithdrawalMinor}
-                  currency={selectedMethod.currency}
-                  available={availableBalance}
-                  flow="withdraw"
-                />
-                {/* Quick-pick amounts (within limits + available balance) */}
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {QUICK_AMOUNTS.filter((a) => {
-                    const minor = a * 100;
-                    return (
-                      minor >= selectedMethod.minWithdrawalMinor &&
-                      minor <= selectedMethod.maxWithdrawalMinor &&
-                      minor <= availableBalance
-                    );
-                  }).map((a) => (
-                    <button
-                      key={a}
-                      type="button"
-                      onClick={() => setAmount(String(a))}
-                      className={cn(
-                        'rounded-md border px-2 py-2.5 text-sm font-semibold transition-colors',
-                        amount === String(a)
-                          ? 'border-gold-soft bg-gold-soft/10 text-gold-soft'
-                          : 'border-border bg-elevated text-base hover:border-gold-soft/40',
-                      )}
-                    >
-                      {a.toLocaleString('en-US')}
-                    </button>
-                  ))}
-                </div>
-                <AmountInput
-                  label={locale === 'bn' ? 'উত্তোলনের পরিমাণ' : 'Withdraw Amount'}
+          {/* Step 2: Amount Option Grid */}
+          {selectedMethod && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">। এমাউন্ট</h3>
+              
+              {/* Target limit range in Bengali */}
+              <div className="text-right text-xs text-gray-500 font-mono">
+                সীমা: ৳{toBengaliNumerals(minVal)} - ৳{toBengaliNumerals(maxVal)}
+              </div>
+
+              {/* Quick buttons */}
+              <div className="grid grid-cols-4 gap-2">
+                {QUICK_AMOUNTS.filter(val => val >= minVal && val <= maxVal).map((val) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setAmount(String(val))}
+                    className={cn(
+                      'rounded border py-2 text-xs font-bold transition-all',
+                      amount === String(val)
+                        ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
+                        : 'border-[#2d3035] bg-[#1a1b1e] text-gray-300 hover:border-gray-600'
+                    )}
+                  >
+                    {toBengaliNumerals(val)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Exact amount input */}
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">৳</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder="0.00"
                   value={amount}
-                  onChange={setAmount}
-                  currency={selectedMethod.currency}
-                  min={selectedMethod.minWithdrawalMinor}
-                  max={selectedMethod.maxWithdrawalMinor}
-                  error={amountError}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full rounded-lg border border-[#2d3035] bg-[#1a1b1e] py-3 pl-8 pr-12 text-sm font-bold text-white focus:border-[var(--brand)] focus:outline-none"
                 />
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-muted">
-                    {locale === 'bn' ? 'আপনার অ্যাকাউন্ট নম্বর' : 'Your Account Number'} <span className="text-muted">{locale === 'bn' ? '(ঐচ্ছিক)' : '(optional)'}</span>
-                  </label>
-                  <Input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    placeholder={locale === 'bn' ? 'যেমন আপনার bKash/Nagad/Bank নম্বর' : 'e.g. Your bKash/Nagad/Bank number'}
-                    maxLength={64}
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500 font-mono">BDT</span>
+              </div>
+              {amountError && <p className="text-xs text-rose-500 font-bold">{amountError}</p>}
+            </div>
+          )}
+
+          {/* Step 3: Select Phone Number (ফোন নম্বর নির্বাচন করুন) */}
+          {selectedMethod && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">। ফোন নম্বর নির্বাচন করুন</h3>
+              <div className="space-y-2">
+                {/* Profile number option */}
+                {profile?.phone && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseCustomNumber(false);
+                      setAccountNumber(profile.phone || '');
+                    }}
+                    className={cn(
+                      'w-full text-left rounded-xl p-4 font-mono font-bold text-base transition-all border',
+                      !useCustomNumber
+                        ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
+                        : 'border-[#2d3035] bg-[#1a1b1e] text-white hover:border-gray-600'
+                    )}
+                  >
+                    {profile.phone}
+                  </button>
+                )}
+
+                {/* Custom number option */}
+                <button
+                  type="button"
+                  onClick={() => setUseCustomNumber(true)}
+                  className={cn(
+                    'w-full text-left rounded-xl p-4 font-bold text-sm transition-all border',
+                    useCustomNumber
+                      ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
+                      : 'border-[#2d3035] bg-[#1a1b1e] text-white hover:border-gray-600'
+                  )}
+                >
+                  অন্য নম্বর ব্যবহার করুন (Use another number)
+                </button>
+              </div>
+
+              {/* Show custom number input field if selected or if profile has no number */}
+              {(useCustomNumber || !profile?.phone) && (
+                <div className="pt-2">
+                  <input
+                    type="tel"
+                    placeholder="নম্বর লিখুন (e.g. 017XXXXXXXX)"
+                    value={customNumberInput}
+                    onChange={(e) => setCustomNumberInput(e.target.value)}
+                    className="w-full rounded-lg border border-[#2d3035] bg-[#1a1b1e] py-3 px-4 text-sm font-mono text-white focus:border-[var(--brand)] focus:outline-none"
+                    required
                   />
-                  <p className="mt-1 text-xs text-muted">
-                    {locale === 'bn' ? 'যে অ্যাকাউন্টে টাকা পেতে চান সেটির তথ্য লিখুন।' : 'Enter the destination account where you want to receive funds.'}
+                  <p className="mt-1 text-[10px] text-gray-500 font-bold">
+                    যে bKash/Nagad/Rocket অ্যাকাউন্টে টাকা তুলতে চান সেটি লিখুন।
                   </p>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
+              )}
+            </div>
+          )}
 
-        {/* Error */}
-        {withdrawMutation.isError && (
-          <Card className="border-danger/30 bg-danger/5">
-            <CardContent className="p-4">
-              <p className="text-sm text-danger">
-                {withdrawMutation.error instanceof ApiRequestError
-                  ? withdrawMutation.error.message
-                  : locale === 'bn' ? 'উত্তোলন জমা দিতে ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।' : 'Failed to submit withdrawal. Please try again.'}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Submit */}
-        {selectedMethod && (
-          <Button type="submit" disabled={!canSubmit} className="w-full text-base">
-            {withdrawMutation.isPending ? (locale === 'bn' ? 'প্রক্রিয়াকরণ হচ্ছে…' : 'Processing…') : (locale === 'bn' ? 'উত্তোলন পর্যালোচনা করুন' : 'Review Withdrawal')}
-          </Button>
-        )}
-      </form>
+          {/* Submit Button */}
+          {selectedMethod && (
+            <Button
+              type="submit"
+              disabled={!canSubmit}
+              className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-black font-extrabold text-sm uppercase rounded-xl tracking-wider shadow-lg active:scale-95 transition-all border-none"
+            >
+              {withdrawMutation.isPending ? 'প্রক্রিয়াকরণ হচ্ছে…' : 'সাবমিট'}
+            </Button>
+          )}
+        </form>
+      </div>
 
       {/* Confirmation Dialog */}
       <ConfirmDialog
         open={showConfirm}
-        title={locale === 'bn' ? 'উত্তোলন নিশ্চিত করুন' : 'Confirm Withdrawal'}
+        title="উত্তোলন নিশ্চিত করুন"
         message={
           amount
-            ? locale === 'bn'
-              ? `আপনি ${formatCurrency(Math.round(parseFloat(amount) * 100), selectedMethod?.currency ?? 'BDT')} উত্তোলন করতে যাচ্ছেন। অনুমোদন না হওয়া পর্যন্ত এই পরিমাণ এসক্রোতে আটকে রাখা হবে। আপনি কি এগিয়ে যেতে চান?`
-              : `You are about to withdraw ${formatCurrency(Math.round(parseFloat(amount) * 100), selectedMethod?.currency ?? 'BDT')}. This amount will be held in escrow until approved. Do you want to proceed?`
-            : locale === 'bn' ? 'অনুগ্রহ করে একটি পরিমাণ লিখুন।' : 'Please enter an amount.'
+            ? `আপনি ${toBengaliNumerals(amount)} BDT উত্তোলন করতে যাচ্ছেন। অনুমোদন না হওয়া পর্যন্ত এই পরিমাণ এসক্রোতে আটকে রাখা হবে। আপনি কি এগিয়ে যেতে চান?`
+            : 'অনুগ্রহ করে উত্তোলনের পরিমাণ লিখুন।'
         }
-        confirmText={locale === 'bn' ? 'উত্তোলন নিশ্চিত করুন' : 'Confirm Withdrawal'}
+        confirmText="উত্তোলন নিশ্চিত করুন"
         onConfirm={handleConfirm}
         onCancel={() => setShowConfirm(false)}
         loading={withdrawMutation.isPending}
