@@ -348,7 +348,7 @@ export default function DepositPage() {
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {accounts.map((acct) => {
                   const active = selectedAccountId === acct.id;
-                  const label = acct.displayName || `${acct.accountType === 'agent' ? 'AP-ক্যাশ আউট' : 'SP-সেন্ড মানি'}`;
+                  const label = `${acct.displayName || (acct.accountType === 'agent' ? 'AP-ক্যাশ আউট' : 'SP-সেন্ড মানি')} (${acct.accountNumberMasked})`;
                   return (
                     <button
                       key={acct.id}
