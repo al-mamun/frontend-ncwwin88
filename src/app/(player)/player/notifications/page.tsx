@@ -14,7 +14,6 @@ import {
   useMarkAllNotificationsRead,
 } from '@/hooks/player-hooks';
 import { PageContainer, LoadingState, ErrorState, EmptyState } from '@/components/shared';
-import { PushOptIn } from '@/components/shared/push-optin';
 import { Button } from '@/components/ui/button';
 import type { PlayerNotification } from '@/types';
 import { cn } from '@/lib/utils';
@@ -97,11 +96,6 @@ export default function NotificationsPage() {
         >
           <CheckCheck className="h-4 w-4" aria-hidden /> Mark all read
         </Button>
-      </div>
-
-      {/* Web Push opt-in */}
-      <div className="mb-6 empty:mb-0">
-        <PushOptIn />
       </div>
 
       {isLoading ? (
