@@ -345,24 +345,54 @@ export default function DepositPage() {
           {selectedMethodId && accounts && accounts.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400">২. ডিপোজিট চ্যানেল (Select Channel)</h3>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 {accounts.map((acct) => {
                   const active = selectedAccountId === acct.id;
-                  const label = `${acct.displayName || (acct.accountType === 'agent' ? 'AP-ক্যাশ আউট' : 'SP-সেন্ড মানি')} (${acct.accountNumberMasked})`;
+                  const isAgent = acct.accountType === 'agent';
+                  const typeLabel = isAgent ? 'ক্যাশ আউট (Cashout)' : 'সেন্ড মানি (Send Money)';
+                  const number = acct.accountNumberMasked;
+                  
                   return (
-                    <button
+                    <div
                       key={acct.id}
-                      type="button"
                       onClick={() => setSelectedAccountId(acct.id)}
                       className={cn(
-                        'rounded-lg border py-2.5 text-xs font-bold text-center transition-colors',
+                        'flex items-center justify-between rounded-xl border p-4 cursor-pointer transition-all',
                         active
-                          ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
-                          : 'border-[#2d3035] bg-[#1a1b1e] hover:border-gray-600 text-gray-300'
+                          ? 'border-[var(--brand)] bg-[#202124] shadow-lg shadow-[var(--brand)]/5'
+                          : 'border-[#2d3035] bg-[#1a1b1e] hover:border-gray-600',
                       )}
                     >
-                      {label}
-                    </button>
+                      <div className="flex items-center gap-3">
+                        {/* selection indicator */}
+                        <div className={cn(
+                          'w-4 h-4 rounded-full border flex items-center justify-center transition-all',
+                          active ? 'border-[var(--brand)]' : 'border-gray-500'
+                        )}>
+                          {active && <div className="w-2.5 h-2.5 rounded-full bg-[var(--brand)]" />}
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                          <span className={cn(
+                            'text-[10px] font-black uppercase px-2 py-0.5 rounded tracking-wide border',
+                            isAgent 
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                              : 'bg-green-500/10 text-green-400 border-green-500/20'
+                          )}>
+                            {typeLabel}
+                          </span>
+                          <span className="font-mono text-sm font-extrabold text-white">{number}</span>
+                        </div>
+                      </div>
+                      
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <CopyButton 
+                          value={number} 
+                          label="Copy" 
+                          className="border-none bg-[#32353b] hover:bg-[#40434b] text-gray-300 px-3 py-1.5 text-[10px] font-bold uppercase rounded-md shadow transition-all" 
+                        />
+                      </div>
+                    </div>
                   );
                 })}
               </div>
