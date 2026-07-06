@@ -126,23 +126,26 @@ export default function NotificationBell() {
                         onClick={() => {
                           if (!n.isRead) markRead.mutate(n.id);
                         }}
-                        className={`flex w-full gap-3 px-4 py-3.5 text-left transition-all duration-300 hover:bg-elevated hover:pl-5 border-l-2 ${
+                        className={`flex flex-row items-start w-full gap-2.5 px-3 py-2 text-left transition-all duration-300 hover:bg-elevated hover:pl-4 border-l-2 ${
                           isUnread
                             ? 'bg-elevated/20 border-l-brand-2'
                             : 'border-l-transparent text-muted'
                         }`}
                       >
-                        {getNotificationIcon(n.type)}
-                        <span className="min-w-0 flex-1">
-                          <span className={`block truncate text-xs font-bold tracking-wide ${isUnread ? 'text-white' : 'text-gray-400'}`}>
+                        <div className="shrink-0 mt-0.5">
+                          {getNotificationIcon(n.type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={`block truncate text-xs font-bold leading-tight ${isUnread ? 'text-white' : 'text-gray-400'}`}>
                             {n.title}
                           </span>
                           {n.message ? (
-                            <span className="mt-0.5 block text-[11px] text-gray-500 leading-relaxed line-clamp-2">{n.message}</span>
+                            <span className="mt-0.5 block text-[11px] text-gray-500 leading-normal line-clamp-1">{n.message}</span>
                           ) : null}
-                          <span className="mt-1 block text-[10px] text-gray-500/60 font-mono">{timeAgo(n.createdAt)}</span>
-                        </span>
+                          <span className="mt-0.5 block text-[9px] text-gray-500/60 font-mono leading-none">{timeAgo(n.createdAt)}</span>
+                        </div>
                       </button>
+
                     </li>
                   );
                 })}
