@@ -968,16 +968,25 @@ ul { list-style: none; }
 @media (max-width: 380px)  { .prov-tile__name { font-size: 11px; } }
 
 /* Custom Autofill Styles Override for Dark Mode */
-html input:-webkit-autofill,
-html input:-webkit-autofill:hover,
-html input:-webkit-autofill:focus,
-html input:-webkit-autofill:active,
-body input:-webkit-autofill,
-body input:-webkit-autofill:hover,
-body input:-webkit-autofill:focus,
-body input:-webkit-autofill:active {
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px #1a1b1e inset !important;
   -webkit-text-fill-color: #ffffff !important;
   color: #ffffff !important;
+  box-shadow: 0 0 0 1000px #1a1b1e inset !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+input:-moz-autofill,
+input:-moz-autofill:hover,
+input:-moz-autofill:focus,
+input:-moz-autofill:active {
+  box-shadow: 0 0 0 1000px #1a1b1e inset !important;
+  color: #ffffff !important;
+}
+
+html, body, input, select, textarea {
+  color-scheme: dark !important;
 }
