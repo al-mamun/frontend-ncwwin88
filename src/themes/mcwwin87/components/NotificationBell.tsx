@@ -126,25 +126,28 @@ export default function NotificationBell() {
                         onClick={() => {
                           if (!n.isRead) markRead.mutate(n.id);
                         }}
-                        className={`flex flex-row items-start w-full gap-2.5 px-3 py-2 text-left transition-all duration-300 hover:bg-elevated hover:pl-4 border-l-2 ${
+                        className={`w-full text-left transition-all duration-300 hover:bg-elevated hover:pl-4 border-l-2 ${
                           isUnread
                             ? 'bg-elevated/20 border-l-brand-2'
                             : 'border-l-transparent text-muted'
                         }`}
                       >
-                        <div className="shrink-0 mt-0.5">
-                          {getNotificationIcon(n.type)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className={`block truncate text-xs font-bold leading-tight ${isUnread ? 'text-white' : 'text-gray-400'}`}>
-                            {n.title}
-                          </span>
-                          {n.message ? (
-                            <span className="mt-0.5 block text-[11px] text-gray-500 leading-normal line-clamp-1">{n.message}</span>
-                          ) : null}
-                          <span className="mt-0.5 block text-[9px] text-gray-500/60 font-mono leading-none">{timeAgo(n.createdAt)}</span>
+                        <div className="flex flex-row items-start gap-2.5 px-3 py-2.5">
+                          <div className="shrink-0 mt-0.5">
+                            {getNotificationIcon(n.type)}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-0.5">
+                            <span className={`block truncate text-xs font-bold leading-tight ${isUnread ? 'text-white' : 'text-gray-400'}`}>
+                              {n.title}
+                            </span>
+                            {n.message ? (
+                              <span className="block text-[11px] text-gray-500 leading-normal line-clamp-2">{n.message}</span>
+                            ) : null}
+                            <span className="block text-[9px] text-gray-500/60 font-mono leading-none">{timeAgo(n.createdAt)}</span>
+                          </div>
                         </div>
                       </button>
+
 
                     </li>
                   );
