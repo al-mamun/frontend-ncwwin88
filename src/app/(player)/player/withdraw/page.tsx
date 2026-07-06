@@ -187,6 +187,12 @@ export default function WithdrawPage() {
 
   // Error state
   if (walletError || !wallet || methodsError || !methods) {
+    const errorDetails = walletError
+      ? `Wallet: ${(walletError as any) instanceof ApiRequestError ? (walletError as any).message : 'Connection failed'}`
+      : methodsError
+      ? `Methods: ${(methodsError as any) instanceof ApiRequestError ? (methodsError as any).message : 'Connection failed'}`
+      : null;
+
     return (
       <PageContainer>
         <div className="mb-4">
@@ -198,6 +204,11 @@ export default function WithdrawPage() {
           </button>
         </div>
         <ErrorState message="উত্তোলনের তথ্য লোড করা যায়নি।" />
+        {errorDetails && (
+          <p className="text-center text-xs text-rose-500 font-bold max-w-md mx-auto -mt-6 mb-6">
+            Error Details: {errorDetails}
+          </p>
+        )}
         <div className="mt-4 flex justify-center gap-2">
           <Button onClick={() => refetchWallet()}>ওয়ালেট আবার চেষ্টা করুন</Button>
           <Button variant="secondary" onClick={() => refetchMethods()}>পদ্ধতি আবার চেষ্টা করুন</Button>
