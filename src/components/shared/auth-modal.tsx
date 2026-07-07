@@ -58,7 +58,10 @@ export function AuthModal() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const code = (params.get('ref') || params.get('aff') || '').trim();
+      let code = (params.get('ref') || params.get('aff') || '').trim();
+      if (!code) {
+        code = (localStorage.getItem('sp_aff_ref') || '').trim();
+      }
       if (code) setReferralCode(code.toUpperCase());
     }
   }, []);

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { useTenant } from '../../core/tenant/TenantProvider';
 import { useAuth } from '../../providers/auth-provider';
 import {
@@ -23,13 +24,26 @@ export function AffiliateTracker() {
   const clickFired = useRef(false);
   const signupFired = useRef(false);
 
+    const router = useRouter();
+  const pathname = usePathname();
+
   useEffect(() => {
     const code = captureAffiliateRef();
-    if (code && !clickFired.current) {
-      clickFired.current = true;
-      void trackAffiliateClick(code, tenant.slug);
+    if (code) {
+      if (!clickFired.current) {
+        clickFired.current = true;
+        void trackAffiliateClick(code, tenant.slug);
+      }
+      if (
+        !user &&
+        pathname !== '/register' &&
+        !pathname.startsWith('/affiliate') &&
+        typeof window !== 'undefined'
+      ) {
+        router.replace(`/register?ref=${code}`);
+      }
     }
-  }, [tenant.slug]);
+  }, [tenant.slug, user, pathname, router]);
 
   useEffect(() => {
     if (user && !signupFired.current) {

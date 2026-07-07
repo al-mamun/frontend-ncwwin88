@@ -36,7 +36,10 @@ export default function RegisterPage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const p = new URLSearchParams(window.location.search);
-    const c = (p.get('ref') || p.get('aff') || '').trim();
+    let c = (p.get('ref') || p.get('aff') || '').trim();
+    if (!c) {
+      c = (localStorage.getItem('sp_aff_ref') || '').trim();
+    }
     if (c) setReferralCode(c.toUpperCase());
   }, []);
 
