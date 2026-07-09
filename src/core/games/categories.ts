@@ -71,6 +71,8 @@ export interface CategoryNavItem {
   /** Human label (localise here). */
   label: string;
   icon: LucideIcon;
+  megaMenuType?: 'providers' | 'games';
+  megaMenuImageUrl?: string | null;
 }
 
 /** Sidebar / tab nav metadata, one entry per canonical category. */

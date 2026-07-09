@@ -132,6 +132,21 @@ export function useGameProvidersDetailed(category?: string): Array<{ key: string
   return useMemo(() => query.data ?? [], [query.data]);
 }
 
+/** Same as useGameProvidersDetailed but also exposes the loading state so
+ *  callers can show a skeleton instead of an empty message while fetching. */
+export function useGameProvidersDetailedState(category?: string): { providers: Array<{ key: string; name: string | null; logoUrl: string | null }>; isLoading: boolean } {
+  const tenant = useTenant().tenant.slug || undefined;
+  const query = useQuery({
+    queryKey: ['providersDetailed', tenant, category ?? null],
+    queryFn: () => playerApi.getProvidersDetailed(tenant, category),
+    staleTime: 5 * 60_000,
+  });
+  return useMemo(
+    () => ({ providers: query.data ?? [], isLoading: query.isLoading }),
+    [query.data, query.isLoading],
+  );
+}
+
 
 /**
  * Category tabs for the player site. Backend-driven: honors the tenant's category
@@ -159,7 +174,13 @@ export function useGameCategories(): CategoryNavItem[] {
     if (m.length) {
       const items = m.map((item): CategoryNavItem => {
         const icon = CATEGORY_META[item.icon ?? '']?.icon ?? CATEGORY_META[item.key]?.icon ?? Gamepad2;
-        return { slug: item.key as CategoryNavItem['slug'], label: item.label || item.key, icon };
+        return {
+          slug: item.key as CategoryNavItem['slug'],
+          label: item.label || item.key,
+          icon,
+          megaMenuType: item.megaMenuType ?? 'providers',
+          megaMenuImageUrl: item.megaMenuImageUrl ?? null,
+        };
       });
       // Always surface the virtual 'Hot' tab FIRST when the menu omits it.
       return items.some((i) => i.slug === 'hot') ? items : [CATEGORY_NAV[0], ...items];

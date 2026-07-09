@@ -97,11 +97,11 @@ export interface PlayerApi {
   /** Distinct provider list for the filter strip. Resilient -> [] on 401/404. */
   getGameProviders(tenant?: string): Promise<string[]>;
   getFeaturedProviders(tenant?: string): Promise<string[]>;
-  getProvidersDetailed(tenant?: string, category?: string): Promise<Array<{ key: string; logoUrl: string | null }>>;
+  getProvidersDetailed(tenant?: string, category?: string): Promise<Array<{ key: string; name: string | null; logoUrl: string | null }>>;
   /** Distinct category slugs (tenant order + hidden applied). Resilient -> [] on 401/404. */
   getGameCategories(tenant?: string): Promise<string[]>;
   /** Operator-defined custom category menu (key/label/icon). Resilient -> [] . */
-  getGameMenu(tenant?: string): Promise<Array<{ key: string; label: string; icon: string | null; baseCategory?: string | null; popular?: boolean; favourite?: boolean; featured?: boolean }>>;
+  getGameMenu(tenant?: string): Promise<Array<{ key: string; label: string; icon: string | null; baseCategory?: string | null; popular?: boolean; favourite?: boolean; featured?: boolean; megaMenuType?: 'providers' | 'games'; megaMenuImageUrl?: string | null }>>;
   launchGame(gameId: string): Promise<GameSession>;
   /** Best-effort no-login demo launch for a visitor. Resilient: resolves to mode 'unavailable' if the provider has no demo. */
   launchGameDemo(gameId: string, tenant: string): Promise<GuestDemoSession>;
@@ -333,7 +333,7 @@ export const playerApi: PlayerApi = {
       if (tenant && tenant.trim()) sp.set('tenant', tenant.trim());
       if (category && category.trim() && category.toLowerCase() !== 'hot' && category.toLowerCase() !== 'all') sp.set('category', category.trim());
       const q = sp.toString() ? `?${sp.toString()}` : '';
-      const res = await apiFetch<Array<{ key: string; logoUrl: string | null }>>(`/public/games/providers-detailed${q}`);
+      const res = await apiFetch<Array<{ key: string; name: string | null; logoUrl: string | null }>>(`/public/games/providers-detailed${q}`);
       return Array.isArray(res) ? res : [];
     } catch (err) {
       if (err instanceof ApiRequestError && (err.status === 401 || err.status === 404)) {
