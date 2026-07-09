@@ -125,6 +125,31 @@ function ProviderGrid({ category }: { category?: string }) {
   );
 }
 
+// ── Mobile Games Grid (rendered when category layout type is games) ──
+function MobileGamesGrid({ category, onPlay }: { category: string; onPlay: (g: Game) => void }) {
+  const { games, isLoading } = useGamesFeed({ category, provider: 'ALL', limit: 24 });
+
+  if (isLoading) {
+    return (
+      <div className="games-box games-box--6">
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div key={i} className="game-card"><Skeleton className="aspect-[4/3] w-full" /></div>
+        ))}
+      </div>
+    );
+  }
+  if (games.length === 0) {
+    return <p style={{ color: 'var(--text-muted, #8b92a8)', fontSize: 14, padding: '12px 0' }}>No games in this category yet.</p>;
+  }
+  return (
+    <div className="games-box games-box--6">
+      {games.slice(0, 24).map((g) => (
+        <GameCard key={g.id} game={g} onPlay={onPlay} />
+      ))}
+    </div>
+  );
+}
+
 // ── Provider Marquee (auto-scrolling real-provider logo slider, desktop) ────
 function ProviderMarquee() {
   const providers = useGameProvidersDetailed().filter((p) => p.logoUrl && p.key && p.key !== 'ALL');
