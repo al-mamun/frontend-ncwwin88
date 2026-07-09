@@ -6,7 +6,7 @@ import { GamePlayOverlay } from '../../components/shared/game-play-overlay';
 import { GuestGamePreview } from '../../components/shared/guest-game-preview';
 import { SignupPrompt } from '../../components/shared/signup-prompt';
 import { GamePoster } from '../../core/games/GamePoster';
-import { useFeaturedProviders, useGameProviders, useGameProvidersDetailed, useGamesFeed, usePopularCategoryKeys } from '../../core/games/useGameCatalog';
+import { useFeaturedProviders, useGameProviders, useGameProvidersDetailed, useGamesFeed, usePopularCategoryKeys, useGameCategories } from '../../core/games/useGameCatalog';
 import { useTenant } from '../../core/tenant/TenantProvider';
 import { useDragScroll } from '../../core/ui/useDragScroll';
 import { useRouter } from 'next/navigation';
@@ -290,6 +290,8 @@ export default function Mcwwin87HomePage() {
 
   const [category, setCategory] = useState('hot');
   const [mobileCat, setMobileCat] = useState('hot');
+  const categories = useGameCategories();
+  const activeMobileCategory = categories.find((c) => c.slug === mobileCat);
   const [activeTab, setActiveTab] = useState(0);
   const [featuredProvider, setFeaturedProvider] = useState('ALL');
   const featuredTabsRef = useDragScroll<HTMLDivElement>();
