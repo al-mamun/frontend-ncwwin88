@@ -14,20 +14,11 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import { Flame, Trophy, Spade, Cherry, Rocket, Dices, Fish, Gamepad2, Ticket, type LucideIcon } from 'lucide-react';
+import { useGameCategories } from '../../../core/games/useGameCatalog';
 import { useI18n } from '../../../core/i18n/LanguageProvider';
 import { cn } from '../../../lib/utils';
 
-const CATS: { slug: string; icon: LucideIcon }[] = [
-  { slug: 'hot', icon: Flame },
-  { slug: 'sports', icon: Trophy },
-  { slug: 'casino', icon: Spade },
-  { slug: 'slot', icon: Cherry },
-  { slug: 'crash', icon: Rocket },
-  { slug: 'table', icon: Dices },
-  { slug: 'fishing', icon: Fish },
-  { slug: 'arcade', icon: Gamepad2 },
-  { slug: 'lottery', icon: Ticket },
-];
+
 
 export default function MobileCategoryBar({
   active,
@@ -40,6 +31,15 @@ export default function MobileCategoryBar({
   const { t } = useI18n();
   const controlled = typeof onSelect === 'function';
   const activeRef = useRef<HTMLAnchorElement | HTMLButtonElement | null>(null);
+
+  const categories = useGameCategories();
+
+  const catLabel = (slug: string, fallback: string) => {
+    if (slug === 'hot') return t('nav.hotGames') || 'Hot Games';
+    const k = `nav.${slug}`;
+    const v = t(k);
+    return v && v !== k ? v : fallback;
+  };
 
   const isActive = (slug: string) =>
     controlled
@@ -54,12 +54,15 @@ export default function MobileCategoryBar({
 
   return (
     <nav className="mcat-bar lg:hidden" aria-label="Game categories">
-      {CATS.map(({ slug, icon: Icon }) => {
+      {categories.map((cat) => {
+        const slug = cat.slug;
+        const Icon = cat.icon;
+        const fallbackLabel = cat.label;
         const on = isActive(slug);
         const inner = (
           <>
             <Icon className="mcat-ico" aria-hidden />
-            <span>{t(`nav.${slug}`)}</span>
+            <span>{catLabel(slug, fallbackLabel)}</span>
           </>
         );
         if (controlled) {
