@@ -292,7 +292,7 @@ export default function Mcwwin87HomePage() {
   const [mobileCat, setMobileCat] = useState('hot');
   const categories = useGameCategories();
   const activeMobileCategory = categories.find((c) => c.slug === mobileCat);
-  const mobileProviders = useGameProvidersDetailed(mobileCat).filter(p => p.key && p.key.trim() && p.key !== 'ALL' && !!p.logoUrl && p.logoUrl.trim());
+  const mobileProviders = useGameProvidersDetailed(mobileCat).filter(p => p.key && p.key.trim() && p.key !== 'ALL');
   const showGames = mobileCat === 'hot' || activeMobileCategory?.megaMenuType === 'games' || mobileProviders.length === 0;
   const [activeTab, setActiveTab] = useState(0);
   const [featuredProvider, setFeaturedProvider] = useState('ALL');
@@ -439,7 +439,7 @@ export default function Mcwwin87HomePage() {
 
         {/* ── Mobile: provider brand grid for the selected category tab ── */}
         <section className="block lg:hidden">
-          <ProviderGrid category={mobileCat === 'hot' ? undefined : mobileCat} />
+          {showGames ? <MobileGamesGrid category={mobileCat} onPlay={handlePlay} /> : <ProviderGrid category={mobileCat} />}
         </section>
 
         {/* ── Featured Games ── */}
