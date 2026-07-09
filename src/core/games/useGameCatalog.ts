@@ -180,6 +180,7 @@ export function useGameCategories(): CategoryNavItem[] {
           icon,
           megaMenuType: item.megaMenuType ?? 'providers',
           megaMenuImageUrl: item.megaMenuImageUrl ?? null,
+          baseCategory: item.baseCategory ?? null,
         };
       });
       // Always surface the virtual 'Hot' tab FIRST when the menu omits it.

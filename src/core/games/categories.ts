@@ -66,6 +66,7 @@ export function normalizeCategory(value: string | null | undefined = ''): string
 }
 
 export interface CategoryNavItem {
+  baseCategory?: string | null;
   /** Canonical slug. */
   slug: CanonicalCategory;
   /** Human label (localise here). */
