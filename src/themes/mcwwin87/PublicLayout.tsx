@@ -38,9 +38,9 @@ function prettyProviderName(key: string): string {
   return key.replace(/[-_]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Mega-menu for the HOT category: real games rendered with their artwork.
-function MegaGames({ onPick }: { onPick: (g: Game) => void }) {
-  const { games, isLoading } = useGamesFeed({ category: 'hot', provider: 'ALL', limit: 24 });
+// Mega-menu for categories showing games directly: real games rendered with their artwork.
+function MegaGames({ cat, onPick }: { cat: string; onPick: (g: Game) => void }) {
+  const { games, isLoading } = useGamesFeed({ category: cat, provider: 'ALL', limit: 24 });
 
   if (isLoading) {
     return (
@@ -71,42 +71,8 @@ function MegaGames({ onPick }: { onPick: (g: Game) => void }) {
   );
 }
 
-// Mega-menu for every non-HOT category: provider logos + names. Clicking a
-// provider opens that provider's games within the category.
-function MegaProviders({ cat, onPickProvider }: { cat: string; onPickProvider: (providerKey: string) => void }) {
-  const { providers: raw, isLoading } = useGameProvidersDetailedState(cat);
-  const providers = raw.filter((p) => p.key && p.key.trim() && p.key !== 'ALL');
-
-  if (isLoading) {
-    return (
-      <div className="nav-mega__grid">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <div key={i} className="nav-mega__item"><div className="nav-mega__icon nav-mega__icon--sk" /></div>
-        ))}
-      </div>
-    );
-  }
-  if (providers.length === 0) {
-    return <div className="nav-mega__grid"><div style={{ gridColumn: '1 / -1', color: 'var(--text-dim)', fontSize: 13, padding: '8px 0' }}>No providers in this category yet.</div></div>;
-  }
-  return (
-    <div className="nav-mega__grid">
-      {providers.map(({ key, name, logoUrl }) => (
-        <div key={key} className="nav-mega__item" onClick={() => onPickProvider(key)}>
-          <div className="nav-mega__icon">
-            {logoUrl
-              ? // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={key} onError={(e) => { (e.currentTarget.style.display = 'none'); }} />
-              : <span className="notranslate">{key.toUpperCase().slice(0, 3)}</span>}
-          </div>
-          <div className="nav-mega__name notranslate">{name || prettyProviderName(key)}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Mega-menu content: HOT shows games, all other categories show providers.
+// Mega-menu content selector: resolves category display content.
+// Defaults to mapping providers, but automatically falls back to games if no providers are available.
 function MegaContent({
   cat,
   megaMenuType = 'providers',
@@ -118,8 +84,43 @@ function MegaContent({
   onPick: (g: Game) => void;
   onPickProvider: (providerKey: string) => void;
 }) {
-  if (cat === 'hot' || megaMenuType === 'games') return <MegaGames onPick={onPick} />;
-  return <MegaProviders cat={cat} onPickProvider={onPickProvider} />;
+  const { providers: raw, isLoading: loadingProviders } = useGameProvidersDetailedState(cat);
+  const providers = raw.filter((p) => p.key && p.key.trim() && p.key !== 'ALL');
+
+  if (cat === 'hot' || megaMenuType === 'games') {
+    return <MegaGames cat={cat} onPick={onPick} />;
+  }
+
+  if (loadingProviders) {
+    return (
+      <div className="nav-mega__grid">
+        {Array.from({ length: 20 }).map((_, i) => (
+          <div key={i} className="nav-mega__item"><div className="nav-mega__icon nav-mega__icon--sk" /></div>
+        ))}
+      </div>
+    );
+  }
+
+  if (providers.length > 0) {
+    return (
+      <div className="nav-mega__grid">
+        {providers.map(({ key, name, logoUrl }) => (
+          <div key={key} className="nav-mega__item" onClick={() => onPickProvider(key)}>
+            <div className="nav-mega__icon">
+              {logoUrl
+                ? // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logoUrl} alt={key} onError={(e) => { (e.currentTarget.style.display = 'none'); }} />
+                : <span className="notranslate">{key.toUpperCase().slice(0, 3)}</span>}
+            </div>
+            <div className="nav-mega__name notranslate">{name || prettyProviderName(key)}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback to displaying games if providers are empty
+  return <MegaGames cat={cat} onPick={onPick} />;
 }
 
 function DesktopNavbar({ megaOpenCat, setMegaOpenCat }: DesktopNavbarProps) {
