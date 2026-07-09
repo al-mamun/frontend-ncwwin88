@@ -28,7 +28,7 @@ export function AffiliateTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const code = captureAffiliateRef();
+    const code = captureAffiliateRef(tenant.slug);
     if (code) {
       if (!clickFired.current) {
         clickFired.current = true;
@@ -47,12 +47,12 @@ export function AffiliateTracker() {
 
   useEffect(() => {
     if (user && !signupFired.current) {
-      const code = getAffiliateRef();
+      const code = getAffiliateRef(tenant.slug);
       if (code) {
         signupFired.current = true;
         // Authenticated attribution links the player to the affiliate (enables
         // commission accrual on future deposits) AND counts the signup.
-        void trackAffiliateAttribution(code).finally(() => clearAffiliateRef());
+        void trackAffiliateAttribution(code).finally(() => clearAffiliateRef(tenant.slug));
       }
     }
   }, [user, tenant.slug]);

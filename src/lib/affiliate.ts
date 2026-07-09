@@ -8,35 +8,36 @@
  */
 import { apiSend } from './api';
 
-const AFF_KEY = 'sp_aff_ref';
+const getKey = (slug?: string) => slug ? `sp_aff_ref_${slug}` : 'sp_aff_ref';
 
 /** Read ?ref/?aff from the URL (persisting it), else return the stored code. */
-export function captureAffiliateRef(): string | null {
+export function captureAffiliateRef(tenantSlug?: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
+    const key = getKey(tenantSlug);
     const p = new URLSearchParams(window.location.search);
     const code = (p.get('ref') || p.get('aff') || '').trim().toUpperCase();
     if (code) {
-      localStorage.setItem(AFF_KEY, code);
+      localStorage.setItem(key, code);
       return code;
     }
-    return localStorage.getItem(AFF_KEY);
+    return localStorage.getItem(key);
   } catch {
     return null;
   }
 }
 
-export function getAffiliateRef(): string | null {
+export function getAffiliateRef(tenantSlug?: string): string | null {
   try {
-    return localStorage.getItem(AFF_KEY);
+    return localStorage.getItem(getKey(tenantSlug));
   } catch {
     return null;
   }
 }
 
-export function clearAffiliateRef(): void {
+export function clearAffiliateRef(tenantSlug?: string): void {
   try {
-    localStorage.removeItem(AFF_KEY);
+    localStorage.removeItem(getKey(tenantSlug));
   } catch {
     /* ignore */
   }

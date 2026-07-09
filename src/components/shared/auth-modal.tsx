@@ -60,11 +60,11 @@ export function AuthModal() {
       const params = new URLSearchParams(window.location.search);
       let code = (params.get('ref') || params.get('aff') || '').trim();
       if (!code) {
-        code = (localStorage.getItem('sp_aff_ref') || '').trim();
+        code = (localStorage.getItem(`sp_aff_ref_${tenant.slug}`) || '').trim();
       }
       if (code) setReferralCode(code.toUpperCase());
     }
-  }, []);
+  }, [tenant.slug]);
 
   const handleClose = () => {
     const params = new URLSearchParams(searchParams.toString());

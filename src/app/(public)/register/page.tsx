@@ -38,10 +38,10 @@ export default function RegisterPage() {
     const p = new URLSearchParams(window.location.search);
     let c = (p.get('ref') || p.get('aff') || '').trim();
     if (!c) {
-      c = (localStorage.getItem('sp_aff_ref') || '').trim();
+      c = (localStorage.getItem(`sp_aff_ref_${tenant.slug}`) || '').trim();
     }
     if (c) setReferralCode(c.toUpperCase());
-  }, []);
+  }, [tenant.slug]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
