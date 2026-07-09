@@ -238,7 +238,7 @@ ul { list-style: none; }
 .nav-mega__grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 18px 12px; padding: 26px 0; }
 .nav-mega__item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; text-align: center; }
 .nav-mega__icon { width: 56px; height: 56px; border-radius: 14px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; font-size: 16px; transition: transform .15s; box-shadow: 0 4px 12px rgba(0,0,0,.3); background: var(--bg-3, #1a2744); }
-.nav-mega__icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.nav-mega__icon img { width: 100%; height: 100%; object-fit: contain; padding: 8px; display: block; }
 .nav-mega__icon--sk { background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.10), rgba(255,255,255,.04)); background-size: 200% 100%; animation: gc-sk 1.2s ease-in-out infinite; }
 @keyframes gc-sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 .nav-mega__item:hover .nav-mega__icon { transform: translateY(-3px); }
@@ -957,7 +957,7 @@ ul { list-style: none; }
   border-top: 18px solid var(--gold, #c9a33d); border-left: 18px solid transparent;
   z-index: 2; pointer-events: none;
 }
-.prov-tile__logo { width: 100%; height: 100%; object-fit: cover; }
+.prov-tile__logo { max-width: 100%; max-height: 100%; object-fit: contain; }
 .prov-tile__mark { font-weight: 800; font-size: 20px; letter-spacing: .5px; color: var(--gold, #e7c14c); }
 .prov-tile__name {
   width: 100%; text-align: center; padding: 8px 6px; font-size: 13px; font-weight: 600;

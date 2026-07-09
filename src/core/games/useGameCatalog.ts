@@ -122,7 +122,7 @@ export function useFeaturedProviders(): string[] {
 }
 
 /** Visible providers with their effective logo — for the category filter strip. */
-export function useGameProvidersDetailed(category?: string): Array<{ key: string; logoUrl: string | null }> {
+export function useGameProvidersDetailed(category?: string): Array<{ key: string; name: string | null; logoUrl: string | null }> {
   const tenant = useTenant().tenant.slug || undefined;
   const query = useQuery({
     queryKey: ['providersDetailed', tenant, category ?? null],

@@ -104,7 +104,7 @@ function ProviderGrid({ category }: { category?: string }) {
   const target = category && category !== 'hot' ? category : 'slot';
   return (
     <div className="provider-grid">
-      {providers.map(({ key, logoUrl }) => (
+      {providers.map(({ key, name, logoUrl }) => (
         <button
           key={key}
           className="prov-tile"
@@ -118,7 +118,7 @@ function ProviderGrid({ category }: { category?: string }) {
               <span className="prov-tile__mark notranslate">{key.toUpperCase()}</span>
             )}
           </div>
-          <div className="prov-tile__name notranslate">{prettyProvider(key)}</div>
+          <div className="prov-tile__name notranslate">{name || prettyProvider(key)}</div>
         </button>
       ))}
     </div>
