@@ -185,8 +185,6 @@ function DesktopNavbar({ megaOpenCat, setMegaOpenCat }: DesktopNavbarProps) {
             )}
           </div>
         ))}
-        <a className="navbar__link" href="/player/promotions">{t('nav.promotions')}</a>
-        <a className="navbar__link" href="/player/vip">{t('nav.vip')}</a>
       </div>
       <div className={`nav-mega ${megaOpenCat ? 'open' : ''}`} id="navMega">
         <div className="container" style={{ display: 'flex', gap: 24, alignItems: 'stretch' }}>
