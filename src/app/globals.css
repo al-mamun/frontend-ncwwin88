@@ -942,21 +942,22 @@ ul { list-style: none; }
 .provider-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
 .prov-tile {
   position: relative; display: flex; flex-direction: column; align-items: center;
-  background: var(--bg-2, #272e54); border: 1px solid var(--line, rgba(255,255,255,0.08));
+  background: var(--bg-2, #191B22); border: 1px solid var(--line, rgba(255,255,255,0.08));
   border-radius: 12px; overflow: hidden; cursor: pointer; padding: 0;
   transition: transform .18s ease, box-shadow .2s ease, border-color .2s ease;
+  aspect-ratio: 1 / 1;
 }
 .prov-tile:hover { transform: translateY(-4px); box-shadow: 0 8px 26px rgba(0,0,0,.4); border-color: var(--gold, #c9a33d); }
 .prov-tile__media {
-  position: relative; width: 100%; aspect-ratio: 1 / 1; display: flex;
-  align-items: center; justify-content: center; padding: 14px;
+  position: relative; width: 100%; flex: 1; min-height: 0; display: flex;
+  align-items: center; justify-content: center; padding: 0;
 }
 .prov-tile__media::after {
   content: ""; position: absolute; top: 0; right: 0; width: 0; height: 0;
   border-top: 18px solid var(--gold, #c9a33d); border-left: 18px solid transparent;
   z-index: 2; pointer-events: none;
 }
-.prov-tile__logo { max-width: 100%; max-height: 100%; object-fit: contain; }
+.prov-tile__logo { width: 100%; height: 100%; object-fit: cover; }
 .prov-tile__mark { font-weight: 800; font-size: 20px; letter-spacing: .5px; color: var(--gold, #e7c14c); }
 .prov-tile__name {
   width: 100%; text-align: center; padding: 8px 6px; font-size: 13px; font-weight: 600;
