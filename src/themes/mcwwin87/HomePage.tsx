@@ -290,6 +290,7 @@ export default function Mcwwin87HomePage() {
 
   const [category, setCategory] = useState('hot');
   const [mobileCat, setMobileCat] = useState('hot');
+  const mobileProviders = useGameProvidersDetailed(mobileCat).filter(p => p.key && p.key.trim() && p.key !== 'ALL' && !!p.logoUrl && p.logoUrl.trim());
   const categories = useGameCategories();
   const activeMobileCategory = categories.find((c) => c.slug === mobileCat);
   const [activeTab, setActiveTab] = useState(0);
