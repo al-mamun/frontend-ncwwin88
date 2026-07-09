@@ -35,7 +35,7 @@ export default function MobileCategoryBar({
   const categories = useGameCategories();
 
   const catLabel = (slug: string, fallback: string) => {
-    if (slug === 'hot') return t('nav.hotGames') || 'Hot Games';
+    if (slug === 'hot') return t('nav.hot') || 'HOT';
     const k = `nav.${slug}`;
     const v = t(k);
     return v && v !== k ? v : fallback;

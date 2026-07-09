@@ -290,9 +290,10 @@ export default function Mcwwin87HomePage() {
 
   const [category, setCategory] = useState('hot');
   const [mobileCat, setMobileCat] = useState('hot');
-  const mobileProviders = useGameProvidersDetailed(mobileCat).filter(p => p.key && p.key.trim() && p.key !== 'ALL' && !!p.logoUrl && p.logoUrl.trim());
   const categories = useGameCategories();
   const activeMobileCategory = categories.find((c) => c.slug === mobileCat);
+  const mobileProviders = useGameProvidersDetailed(mobileCat).filter(p => p.key && p.key.trim() && p.key !== 'ALL' && !!p.logoUrl && p.logoUrl.trim());
+  const showGames = mobileCat === 'hot' || activeMobileCategory?.megaMenuType === 'games' || mobileProviders.length === 0;
   const [activeTab, setActiveTab] = useState(0);
   const [featuredProvider, setFeaturedProvider] = useState('ALL');
   const featuredTabsRef = useDragScroll<HTMLDivElement>();
