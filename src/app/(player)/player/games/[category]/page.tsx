@@ -58,7 +58,9 @@ export default function GameCategoryLobby() {
 
   // Server-paginated feed for this route category (+ provider/search)
   const { games, isLoading, hasMore, fetchMore, isFetchingMore } = useGamesFeed({
-    category,
+    // When a specific provider is selected, show that provider's FULL
+    // library across every category (not just the current route category).
+    category: selectedProvider && selectedProvider !== 'ALL' ? 'hot' : category,
     provider: selectedProvider,
     search,
     limit: 120,
