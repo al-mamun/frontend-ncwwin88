@@ -111,14 +111,15 @@ export function useGameProviders(): string[] {
  * Provider keys the operator flagged FEATURED (tenant override wins) — used to
  * build the Featured Games marquee tabs. Empty array when none are flagged.
  */
-export function useFeaturedProviders(): string[] {
+export function useFeaturedProviders(): { keys: string[]; isFetched: boolean } {
   const tenant = useTenant().tenant.slug || undefined;
   const query = useQuery({
     queryKey: ['featuredProviders', tenant],
     queryFn: () => playerApi.getFeaturedProviders(tenant),
     staleTime: 5 * 60_000,
   });
-  return useMemo(() => query.data ?? [], [query.data]);
+  const keys = useMemo(() => query.data ?? [], [query.data]);
+  return { keys, isFetched: query.isFetched };
 }
 
 /** Visible providers with their effective logo — for the category filter strip. */

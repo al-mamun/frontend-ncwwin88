@@ -318,12 +318,15 @@ export default function Mcwwin87HomePage() {
   // wins). 'All' is first and shows POPULAR games across all providers; each
   // provider tab shows that provider's games. When NOTHING is flagged featured yet,
   // fall back to the real provider list (data-driven) rather than a static list.
-  const featuredProviderKeys = useFeaturedProviders();
+  const { keys: featuredProviderKeys, isFetched: featuredFetched } = useFeaturedProviders();
   const allProviderKeys = useGameProviders().filter((p) => p && p !== 'ALL');
-  const tabProviderKeys = featuredProviderKeys.length > 0 ? featuredProviderKeys : allProviderKeys.slice(0, 8);
-  const providerTabs = tabProviderKeys.length > 0
-    ? [{ label: 'All', provider: 'ALL' }, ...tabProviderKeys.map((p) => ({ label: p, provider: p }))]
-    : FEATURED_TABS;
+  // Avoid the tab flicker: while the featured-providers query is still loading,
+  // don't render fallback provider sets (static list / first-N providers) that
+  // then snap to the real featured set. Show only 'All' until featured resolves.
+  const tabProviderKeys = !featuredFetched
+    ? []
+    : (featuredProviderKeys.length > 0 ? featuredProviderKeys : allProviderKeys.slice(0, 8));
+  const providerTabs = [{ label: 'All', provider: 'ALL' }, ...tabProviderKeys.map((p) => ({ label: p, provider: p }))];
 
   const { data: wallet, refetch: refetchWallet } = useWallet();
   const launchMutation = useGameLaunch();
