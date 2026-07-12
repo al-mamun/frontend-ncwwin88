@@ -14,6 +14,7 @@ import {
   ArrowLeft, Headphones, User, BadgeCheck, Phone, Mail, AtSign, Pencil,
 } from 'lucide-react';
 import { useProfile, useUpdateProfile } from '@/hooks/player-hooks';
+import { PhoneVerifyCard } from '@/components/player/phone-verify';
 import { useI18n } from '@/core/i18n/LanguageProvider';
 import { playerApi } from '@/services/player.service';
 import { ApiRequestError } from '@/lib/api';
@@ -156,9 +157,11 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-2">
           <InfoRow icon={User} label={locale === 'bn' ? 'পুরো নাম' : 'Full Name'} value={fullName} locale={locale} />
           <InfoRow icon={AtSign} label={locale === 'bn' ? 'ইউজারনেম' : 'Username'} value={profile.username} locale={locale} />
-          <InfoRow icon={Phone} label={locale === 'bn' ? 'মোবাইল নম্বর' : 'Mobile Number'} value={profile.phone ?? ''} verified={verified && !!profile.phone} locale={locale} />
+          <InfoRow icon={Phone} label={locale === 'bn' ? 'মোবাইল নম্বর' : 'Mobile Number'} value={profile.phone ?? ''} verified={!!profile.isPhoneVerified} locale={locale} />
           <InfoRow icon={Mail} label={locale === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'} value={profile.email} verified={verified} locale={locale} />
         </div>
+
+        <PhoneVerifyCard />
 
         {success && (
           <div className="mt-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">

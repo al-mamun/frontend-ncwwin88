@@ -62,6 +62,8 @@ export interface PlayerApi {
   getProfile(): Promise<PlayerProfile>;
   updateProfile(input: UpdateProfileInput): Promise<PlayerProfile>;
   changePassword(input: ChangePasswordInput): Promise<{ message: string }>;
+  requestPhoneOtp(input: { phone?: string }): Promise<{ ok: boolean; alreadyVerified?: boolean; delivered?: boolean; target?: string }>;
+  confirmPhoneOtp(input: { code: string }): Promise<{ ok: boolean; isPhoneVerified: boolean }>;
   getWallet(): Promise<PlayerWallet>;
   getLedger(params: {
     page?: number;
@@ -214,6 +216,20 @@ export const playerApi: PlayerApi = {
 
   async changePassword(input) {
     return apiFetch<{ message: string }>('/player/change-password', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  async requestPhoneOtp(input) {
+    return apiFetch<{ ok: boolean; alreadyVerified?: boolean; delivered?: boolean; target?: string }>('/player/phone/request', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+  },
+
+  async confirmPhoneOtp(input) {
+    return apiFetch<{ ok: boolean; isPhoneVerified: boolean }>('/player/phone/confirm', {
       method: 'POST',
       body: JSON.stringify(input),
     });

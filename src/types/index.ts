@@ -72,6 +72,7 @@ export interface PlayerProfile {
   timezone: string;
   country: string | null;
   kycStatus: KycStatus;
+  isPhoneVerified: boolean;
   createdAt: string;
   notificationPreferences: {
     email: boolean;

@@ -17,6 +17,7 @@ import {
   useProfile,
 } from '@/hooks/player-hooks';
 import { PageContainer, LoadingState, ErrorState, EmptyState, ConfirmDialog } from '@/components/shared';
+import { PhoneVerifyCard } from '@/components/player/phone-verify';
 import {
   PaymentMethodCard,
   AmountInput,
@@ -239,6 +240,7 @@ export default function WithdrawPage() {
 
   return (
     <PageContainer>
+      <PhoneVerifyCard context="withdraw" />
       {/* Tabbed Header: Deposit / Withdraw */}
       <div className="mb-6 border-b border-[#1d1f24] flex justify-center">
         <div className="flex gap-4">
