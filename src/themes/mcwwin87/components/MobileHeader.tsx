@@ -15,6 +15,7 @@ import { useI18n } from '../../../core/i18n/LanguageProvider';
 import { useAuth } from '../../../providers/auth-provider';
 import { useWallet } from '../../../hooks/player-hooks';
 import MobileMenu from './MobileMenu';
+import NotificationBell from './NotificationBell';
 
 function BrandLockup({ name, logoUrl }: { name: string; logoUrl?: string | null }) {
   if (logoUrl) {
@@ -77,6 +78,7 @@ export default function MobileHeader() {
               aria-hidden
               style={{ width: '22px', height: '22px', borderRadius: '50%', fontSize: '22px', boxShadow: '0 0 0 2px rgba(255,255,255,.15)' }}
             ></span>
+            {user && <NotificationBell />}
           </div>
         </div>
       </header>
