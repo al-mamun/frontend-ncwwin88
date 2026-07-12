@@ -8,13 +8,13 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft, Headphones, User, BadgeCheck, Phone, Mail, AtSign, Pencil,
 } from 'lucide-react';
 import { useProfile, useUpdateProfile } from '@/hooks/player-hooks';
-import { PhoneVerifyCard } from '@/components/player/phone-verify';
+import { PhoneVerifyButton } from '@/components/player/phone-verify';
 import { useI18n } from '@/core/i18n/LanguageProvider';
 import { playerApi } from '@/services/player.service';
 import { ApiRequestError } from '@/lib/api';
@@ -32,8 +32,8 @@ const LANGUAGES = [
 const TIMEZONES = ['Asia/Dhaka', 'Asia/Kolkata', 'Asia/Karachi', 'UTC', 'America/New_York'];
 
 function InfoRow({
-  icon: Icon, label, value, verified, locale,
-}: { icon: typeof User; label: string; value: string; verified?: boolean; locale: string }) {
+  icon: Icon, label, value, verified, locale, action,
+}: { icon: typeof User; label: string; value: string; verified?: boolean; locale: string; action?: ReactNode }) {
   return (
     <div className="flex items-center gap-3 rounded-lg bg-elevated/60 px-4 py-3">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-elevated text-gold-soft">
@@ -43,11 +43,11 @@ function InfoRow({
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted">{label}</p>
         <p className="truncate text-sm font-bold text-white">{value || '—'}</p>
       </div>
-      {verified && (
+      {action ? action : (verified && (
         <span className="flex shrink-0 items-center gap-1 rounded-full border border-success/40 px-2 py-0.5 text-[10px] font-bold uppercase text-success">
           <BadgeCheck className="h-3 w-3" aria-hidden /> {locale === 'bn' ? 'যাচাইকৃত' : 'Verified'}
         </span>
-      )}
+      ))}
     </div>
   );
 }
@@ -157,11 +157,10 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-2">
           <InfoRow icon={User} label={locale === 'bn' ? 'পুরো নাম' : 'Full Name'} value={fullName} locale={locale} />
           <InfoRow icon={AtSign} label={locale === 'bn' ? 'ইউজারনেম' : 'Username'} value={profile.username} locale={locale} />
-          <InfoRow icon={Phone} label={locale === 'bn' ? 'মোবাইল নম্বর' : 'Mobile Number'} value={profile.phone ?? ''} verified={!!profile.isPhoneVerified} locale={locale} />
+          <InfoRow icon={Phone} label={locale === 'bn' ? 'মোবাইল নম্বর' : 'Mobile Number'} value={profile.phone ?? ''} action={<PhoneVerifyButton />} locale={locale} />
           <InfoRow icon={Mail} label={locale === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'} value={profile.email} verified={verified} locale={locale} />
         </div>
 
-        <PhoneVerifyCard />
 
         {success && (
           <div className="mt-4 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">
