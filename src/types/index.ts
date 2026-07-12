@@ -73,6 +73,7 @@ export interface PlayerProfile {
   country: string | null;
   kycStatus: KycStatus;
   isPhoneVerified: boolean;
+  requirePhoneVerification?: boolean;
   createdAt: string;
   notificationPreferences: {
     email: boolean;

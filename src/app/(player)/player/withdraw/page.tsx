@@ -238,9 +238,18 @@ export default function WithdrawPage() {
   const minVal = selectedMethod ? selectedMethod.minWithdrawalMinor / 100 : 300;
   const maxVal = selectedMethod ? selectedMethod.maxWithdrawalMinor / 100 : 25000;
 
+  if (profile?.requirePhoneVerification && !profile?.isPhoneVerified) {
+    return (
+      <PageContainer>
+        <div className="mx-auto max-w-xl pt-6">
+          <PhoneVerifyCard context="withdraw" />
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer>
-      <PhoneVerifyCard context="withdraw" />
       {/* Tabbed Header: Deposit / Withdraw */}
       <div className="mb-6 border-b border-[#1d1f24] flex justify-center">
         <div className="flex gap-4">
