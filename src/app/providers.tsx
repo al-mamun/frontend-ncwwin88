@@ -9,6 +9,7 @@ import { LanguageProvider } from '../core/i18n/LanguageProvider';
 import { WalletProvider } from '../core/wallet/WalletProvider';
 import { TenantUnavailable } from '../components/shared/TenantUnavailable';
 import { AffiliateTracker } from '../components/shared/AffiliateTracker';
+import { ChatWidget } from '../components/shared/chat-widget';
 import type { TenantPublicConfig } from '../types/tenant';
 
 /**
@@ -59,6 +60,7 @@ export function Providers({
               <WalletProvider>
                 <AffiliateTracker />
                 {children}
+                <ChatWidget />
               </WalletProvider>
             </AuthProvider>
           )}

@@ -52,6 +52,8 @@ export interface TenantPublicConfig {
   appDownloadUrl?: string | null;
   /** Tenant social/community links: platform -> URL. */
   social?: Record<string, string>;
+  /** Live-chat widget enabled for this tenant (backend flag). */
+  chatEnabled?: boolean;
   /** Show the signup captcha (tenant-controlled). */
   signupCaptchaEnabled?: boolean;
   /** Optional affiliate-site hero banner. */

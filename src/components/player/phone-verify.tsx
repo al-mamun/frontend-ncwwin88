@@ -8,7 +8,8 @@ import { playerApi } from '@/services/player.service';
 import { ApiRequestError } from '@/lib/api';
 import { useI18n } from '@/core/i18n/LanguageProvider';
 
-/** SMS phone-verification popup (send code + enter code). White card, theme-independent. */
+/** SMS phone-verification popup. Themed via tokens so it follows each site's
+ *  branding (surface / brand / success colours), light or dark. */
 export function PhoneVerifyModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { locale } = useI18n();
   const bn = locale === 'bn';
@@ -49,47 +50,47 @@ export function PhoneVerifyModal({ open, onClose }: { open: boolean; onClose: ()
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 text-[var(--text-primary,#fff)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-2/15 text-brand-2">
             <Smartphone className="h-6 w-6" aria-hidden />
           </span>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200">
+          <button type="button" onClick={onClose} aria-label="Close" className="flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-muted transition-colors hover:text-[var(--text-primary,#fff)]">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <h2 className="text-xl font-extrabold uppercase tracking-wide text-blue-900">{bn ? 'ফোন যাচাই' : 'Phone Verification'}</h2>
-        <p className="mt-2 text-sm text-gray-600">
+        <h2 className="text-xl font-extrabold uppercase tracking-wide text-[var(--text-primary,#fff)]">{bn ? 'ফোন যাচাই' : 'Phone Verification'}</h2>
+        <p className="mt-2 text-sm text-muted">
           {bn ? "এসএমএস ওটিপি পেতে 'কোড পাঠান' চাপুন — " : "Click 'Send Code' to receive an SMS OTP at "}
-          <span className="font-bold text-blue-700">{target || '—'}</span>
+          <span className="font-bold text-brand-2">{target || '—'}</span>
         </p>
 
         <button type="button" onClick={send} disabled={busy || (!hasPhone && !phone.trim())}
-          className="mt-5 w-full rounded-xl bg-blue-700 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-blue-800 disabled:opacity-50">
+          className="mt-5 w-full rounded-xl bg-brand-2 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-90 disabled:opacity-50">
           {busy && !sent ? (bn ? 'পাঠানো হচ্ছে…' : 'Sending…') : (bn ? 'এসএমএস কোড পাঠান' : 'Send SMS Code')}
         </button>
 
         {!hasPhone && (
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+8801XXXXXXXXX"
-            className="mt-3 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none focus:border-blue-500" />
+            className="mt-3 w-full rounded-xl border border-border bg-elevated px-4 py-3 text-sm text-[var(--text-primary,#fff)] outline-none placeholder:text-muted focus:border-brand-2" />
         )}
 
-        <div className="my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          <span className="h-px flex-1 bg-gray-200" /> {bn ? 'অথবা কোড দিন' : 'Or enter code'} <span className="h-px flex-1 bg-gray-200" />
+        <div className="my-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-muted">
+          <span className="h-px flex-1 bg-border" /> {bn ? 'অথবা কোড দিন' : 'Or enter code'} <span className="h-px flex-1 bg-border" />
         </div>
 
         <input value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))} inputMode="numeric" maxLength={8}
           placeholder={bn ? '৬-সংখ্যার কোড দিন' : 'Enter 6-digit code'}
-          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-gray-900 outline-none focus:border-blue-500" />
+          className="w-full rounded-xl border border-border bg-elevated px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-[var(--text-primary,#fff)] outline-none placeholder:text-muted focus:border-brand-2" />
 
         <button type="button" onClick={verify} disabled={busy || code.trim().length < 4}
-          className="mt-4 w-full rounded-xl bg-green-600 py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:bg-green-700 disabled:opacity-50">
+          className="mt-4 w-full rounded-xl bg-success py-3 text-sm font-bold uppercase tracking-wide text-white transition hover:opacity-90 disabled:opacity-50">
           {busy && sent ? (bn ? 'যাচাই হচ্ছে…' : 'Verifying…') : (bn ? 'ফোন যাচাই করুন' : 'Verify Phone')}
         </button>
 
-        {error && <p className="mt-3 text-center text-xs font-semibold text-red-600">{error}</p>}
-        {okMsg && !error && <p className="mt-3 text-center text-xs font-semibold text-green-600">{okMsg}</p>}
+        {error && <p className="mt-3 text-center text-xs font-semibold text-danger">{error}</p>}
+        {okMsg && !error && <p className="mt-3 text-center text-xs font-semibold text-success">{okMsg}</p>}
       </div>
     </div>
   );
@@ -104,7 +105,7 @@ export function PhoneVerifyButton() {
   if (!profile) return null;
   if (profile.isPhoneVerified) {
     return (
-      <span className="flex shrink-0 items-center gap-1 rounded-lg bg-green-500/15 px-3 py-1.5 text-xs font-bold uppercase text-green-500">
+      <span className="flex shrink-0 items-center gap-1 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-bold uppercase text-success">
         <Check className="h-3.5 w-3.5" aria-hidden /> {bn ? 'যাচাইকৃত' : 'Verified'}
       </span>
     );
@@ -112,7 +113,7 @@ export function PhoneVerifyButton() {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}
-        className="flex shrink-0 items-center gap-1 rounded-lg bg-red-500/15 px-3 py-1.5 text-xs font-bold uppercase text-red-500 transition hover:bg-red-500/25">
+        className="flex shrink-0 items-center gap-1 rounded-lg bg-danger/15 px-3 py-1.5 text-xs font-bold uppercase text-danger transition hover:bg-danger/25">
         <ShieldAlert className="h-3.5 w-3.5" aria-hidden /> {bn ? 'যাচাই করুন' : 'Verify'}
       </button>
       <PhoneVerifyModal open={open} onClose={() => setOpen(false)} />

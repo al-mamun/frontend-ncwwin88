@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useTenant } from '../../../core/tenant/TenantProvider';
 import { useI18n } from '../../../core/i18n/LanguageProvider';
+import { useAuth } from '../../../providers/auth-provider';
+import { useWallet } from '../../../hooks/player-hooks';
 import MobileMenu from './MobileMenu';
 
 function BrandLockup({ name, logoUrl }: { name: string; logoUrl?: string | null }) {
@@ -39,6 +41,10 @@ function BrandLockup({ name, logoUrl }: { name: string; logoUrl?: string | null 
 export default function MobileHeader() {
   const { tenant } = useTenant();
   const { t } = useI18n();
+  const { user } = useAuth();
+  const { data: wallet } = useWallet();
+  const balance = wallet ? ((wallet.balanceMinor - wallet.heldMinor) / 100).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '0.00';
+  const currency = tenant.currency || 'BDT';
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -59,6 +65,12 @@ export default function MobileHeader() {
           </Link>
 
           <div className="header__right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {user && (
+              <Link href="/player/deposit" aria-label="Wallet balance" className="flex items-center gap-1 rounded-full bg-elevated px-2.5 py-1 text-gold-soft">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden><path d="M21 7.5H4.5a1 1 0 0 1 0-2H18a1 1 0 1 0 0-2H4.5a3 3 0 0 0-3 3v9a3 3 0 0 0 3 3H21a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1Zm-3.5 6.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5Z"/></svg>
+                <span className="font-mono text-xs font-extrabold notranslate">{currency} {balance}</span>
+              </Link>
+            )}
             {/* Country flag */}
             <span
               className="fi fis fi-bd"
