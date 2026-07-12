@@ -165,6 +165,12 @@ export const affiliateApi = {
   updatePayoutMethod(method: string, payoutDetails: string): Promise<{ affiliate: AffiliateProfile }> {
     return affiliateFetch<{ affiliate: AffiliateProfile }>('/affiliate/payout-method', { method: 'PATCH', body: JSON.stringify({ method, payoutDetails }) });
   },
+  updateProfile(displayName: string): Promise<{ affiliate: AffiliateProfile }> {
+    return affiliateFetch<{ affiliate: AffiliateProfile }>('/affiliate/profile', { method: 'PATCH', body: JSON.stringify({ displayName }) });
+  },
+  changePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean }> {
+    return affiliateFetch<{ ok: boolean }>('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+  },
 
   verificationStatus(): Promise<AffiliateVerification> {
     return affiliateFetch<AffiliateVerification>('/affiliate/verification-status');

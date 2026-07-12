@@ -97,7 +97,10 @@ export default function AffiliateDashboardPage() {
                         <BrandLockup className="h-8 w-auto object-contain" />
             <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--gold-soft)]">PARTNER</span>
           </Link>
-          <button onClick={() => { void logout().then(() => router.replace('/login')); }} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10">Sign out</button>
+          <div className="flex items-center gap-2">
+            <Link href="/account" className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10">My Account</Link>
+            <button onClick={() => { void logout().then(() => router.replace('/login')); }} className="rounded-lg border border-white/15 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10">Sign out</button>
+          </div>
         </header>
 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
