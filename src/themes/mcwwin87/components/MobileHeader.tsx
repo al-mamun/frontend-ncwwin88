@@ -77,14 +77,6 @@ export default function MobileHeader() {
               aria-hidden
               style={{ width: '22px', height: '22px', borderRadius: '50%', fontSize: '22px', boxShadow: '0 0 0 2px rgba(255,255,255,.15)' }}
             ></span>
-
-            {/* 24-7 customer support */}
-            <Link href="/player/support" aria-label="24-7 customer support" className="flex items-center gap-1.5 text-gold-soft">
-              <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden>
-                <path d="M12 1a9 9 0 0 0-9 9v7a3 3 0 0 0 3 3h1a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1H5v-2a7 7 0 0 1 14 0v2h-2a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h1a3 3 0 0 0 3-3v-7a9 9 0 0 0-9-9z"/>
-              </svg>
-              <span className="text-[13px] font-extrabold leading-none">{t('header.support')}</span>
-            </Link>
           </div>
         </div>
       </header>
