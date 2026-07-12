@@ -11,6 +11,9 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '@/core/tenant/TenantProvider';
 import { apiFetch } from '@/lib/api';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAffiliateAuth } from '@/providers/affiliate-auth-provider';
 
 interface PublicProgram {
   id: string; name: string; description: string | null; model: string;
@@ -85,6 +88,12 @@ const FAQS = [
 
 export default function AffiliateLandingPage() {
   const { tenant } = useTenant();
+  const { me, loading } = useAffiliateAuth();
+  const router = useRouter();
+  useEffect(() => {
+    // A signed-in affiliate landing on the marketing page → go to their dashboard.
+    if (!loading && me) router.replace('/dashboard');
+  }, [loading, me, router]);
   const brandName = tenant.name && tenant.name.toLowerCase() !== 'casino' ? tenant.name : 'our brand';
 
   // Real tenant programs power the commission tiers (fallback to the generic set).

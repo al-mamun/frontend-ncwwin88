@@ -94,7 +94,7 @@ export default function AffiliateAccountPage() {
       <AffiliateBackground />
       <div className="mx-auto max-w-3xl">
         <header className="mb-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/dashboard" className="flex items-center gap-3">
             <BrandLockup className="h-8 w-auto object-contain" />
             <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--gold-soft)]">PARTNER</span>
           </Link>
