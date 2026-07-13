@@ -5,6 +5,7 @@ import { Gift } from 'lucide-react';
 import { playerApi } from '@/services/player.service';
 import { PageContainer, LoadingState } from '@/components/shared';
 import PlayerPageHeader from '@/components/player/PlayerPageHeader';
+import { RealtimeBonusClaim } from '@/components/shared/RealtimeBonusClaim';
 
 function money(m: number, c = 'BDT') { return `${c} ${(m / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; }
 function when(s: string | null) { return s ? new Date(s).toLocaleDateString() : ''; }
@@ -17,6 +18,7 @@ export default function RewardsPage() {
   return (
     <PageContainer>
       <PlayerPageHeader title="My Rewards" subtitle="Bonuses and cashback credited to you" icon={Gift} />
+      <RealtimeBonusClaim />
       {bonusWallet.data && bonusWallet.data.lockedMinor > 0 && (
         <div className="mb-6 rounded-xl border border-gold-soft/30 bg-gradient-to-b from-elevated to-surface p-5">
           <div className="flex items-center justify-between">
