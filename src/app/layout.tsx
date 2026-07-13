@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
+import { PWA } from '../components/shared/pwa';
 import SiteLoader from '../components/shared/site-loader';
 import { resolveTenantFromRequest } from '../core/tenant/serverTenant';
 import { getThemeKey } from '../core/theme/applyTheme';
@@ -38,6 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <SiteLoader />
         <Providers tenant={tenant}>{children}</Providers>
+        <PWA installBanner={false} />
       </body>
     </html>
   );

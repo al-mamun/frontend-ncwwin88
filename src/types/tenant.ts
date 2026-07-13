@@ -50,6 +50,10 @@ export interface TenantPublicConfig {
   announcementEnabled?: boolean;
   /** Tenant mobile app download link; shows a Download button when set. */
   appDownloadUrl?: string | null;
+  /** PWA install UX enabled for this tenant (default true). */
+  pwaInstallEnabled?: boolean;
+  /** App-install presentations: any of 'button' | 'banner' | 'popup' (default ['button']). */
+  appInstallModes?: string[];
   /** Tenant social/community links: platform -> URL. */
   social?: Record<string, string>;
   /** Live-chat widget enabled for this tenant (backend flag). */
