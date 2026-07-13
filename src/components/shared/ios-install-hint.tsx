@@ -3,11 +3,17 @@
  * useGetApp() when there is no native install prompt to fire (iOS Safari, an already
  * installed app, or a browser that has not offered beforeinstallprompt). It adapts its
  * steps to the visitor's platform (iOS Share sheet vs Android/desktop browser menu).
+ *
+ * Rendered through a portal to <body> at a very high z-index so it can never be
+ * trapped inside a footer/header stacking context or hidden behind site chrome.
  */
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Share, Plus, MoreVertical, Download, X } from 'lucide-react';
+
+const Z_TOP = 2147483000;
 
 function detectIos(): boolean {
   if (typeof navigator === 'undefined') return false;
@@ -17,8 +23,9 @@ function detectIos(): boolean {
 
 export function IosInstallHint({ open, onClose, appName }: { open: boolean; onClose: () => void; appName?: string }) {
   const [ios, setIos] = useState(false);
-  useEffect(() => { setIos(detectIos()); }, []);
-  if (!open) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); setIos(detectIos()); }, []);
+  if (!open || !mounted) return null;
 
   const chip: React.CSSProperties = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30,
@@ -35,14 +42,14 @@ export function IosInstallHint({ open, onClose, appName }: { open: boolean; onCl
         { icon: <Download className="h-4 w-4" aria-hidden />, text: <>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</> },
       ];
 
-  return (
+  const node = (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="Install app"
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        position: 'fixed', inset: 0, zIndex: Z_TOP, display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
         background: 'rgba(0,0,0,.55)', padding: 'env(safe-area-inset-top) 12px calc(16px + env(safe-area-inset-bottom))',
       }}
     >
@@ -84,6 +91,8 @@ export function IosInstallHint({ open, onClose, appName }: { open: boolean; onCl
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }
 
 export default IosInstallHint;
