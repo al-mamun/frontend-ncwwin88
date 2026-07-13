@@ -1,14 +1,40 @@
 /**
- * IosInstallHint — a small token-branded modal that tells iOS Safari users how to
- * install the site as an app (iOS has no native install prompt). Shown by the
- * useGetApp() 'ios' path. Colours come from the theme design tokens.
+ * IosInstallHint — a small token-branded modal with how-to-install steps, shown by
+ * useGetApp() when there is no native install prompt to fire (iOS Safari, an already
+ * installed app, or a browser that has not offered beforeinstallprompt). It adapts its
+ * steps to the visitor's platform (iOS Share sheet vs Android/desktop browser menu).
  */
 'use client';
 
-import { Share, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Share, Plus, MoreVertical, Download, X } from 'lucide-react';
+
+function detectIos(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
+}
 
 export function IosInstallHint({ open, onClose, appName }: { open: boolean; onClose: () => void; appName?: string }) {
+  const [ios, setIos] = useState(false);
+  useEffect(() => { setIos(detectIos()); }, []);
   if (!open) return null;
+
+  const chip: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30,
+    borderRadius: 8, background: 'var(--elevated, #1f232b)', color: 'var(--lux, var(--gold, #d4af37))',
+  };
+
+  const steps = ios
+    ? [
+        { icon: <Share className="h-4 w-4" aria-hidden />, text: <>Tap the <strong>Share</strong> icon in Safari&apos;s toolbar.</> },
+        { icon: <Plus className="h-4 w-4" aria-hidden />, text: <>Choose <strong>Add to Home Screen</strong>.</> },
+      ]
+    : [
+        { icon: <MoreVertical className="h-4 w-4" aria-hidden />, text: <>Open your browser menu (the <strong>&#8942;</strong> icon).</> },
+        { icon: <Download className="h-4 w-4" aria-hidden />, text: <>Tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.</> },
+      ];
+
   return (
     <div
       role="dialog"
@@ -38,18 +64,12 @@ export function IosInstallHint({ open, onClose, appName }: { open: boolean; onCl
           Add this site to your Home Screen for a full-screen, app-like experience:
         </p>
         <ol style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: 0, padding: 0, listStyle: 'none' }}>
-          <li style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'var(--elevated, #1f232b)', color: 'var(--lux, var(--gold, #d4af37))' }}>
-              <Share className="h-4 w-4" aria-hidden />
-            </span>
-            Tap the <strong>Share</strong> icon in Safari&apos;s toolbar.
-          </li>
-          <li style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'var(--elevated, #1f232b)', color: 'var(--lux, var(--gold, #d4af37))' }}>
-              <Plus className="h-4 w-4" aria-hidden />
-            </span>
-            Choose <strong>Add to Home Screen</strong>.
-          </li>
+          {steps.map((s, i) => (
+            <li key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
+              <span style={chip}>{s.icon}</span>
+              {s.text}
+            </li>
+          ))}
         </ol>
         <button
           onClick={onClose}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useTenant } from '../../../core/tenant/TenantProvider';
 import FooterAppInstall from '../../../components/shared/FooterAppInstall';
+import FooterInstallButton from '../../../components/shared/FooterInstallButton';
 import { useI18n } from '../../../core/i18n/LanguageProvider';
 
 export default function Footer() {
@@ -111,12 +112,7 @@ export default function Footer() {
           </div>
           <div className="footer__col">
             <h4>{t('footer.appDownload')}</h4>
-            <div className="footer__badges">
-              <span className="footer__badge">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/assets/images/app-download/android-download.svg" alt="Android Download" />
-              </span>
-            </div>
+            <FooterInstallButton />
           </div>
           {socialItems.length > 0 && (
           <div className="footer__col">

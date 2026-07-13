@@ -1,18 +1,20 @@
 /**
  * useGetApp — one smart "Get the app" decision for the whole site, so themes render
- * a SINGLE app button instead of competing "Download APK" + "Install PWA" affordances.
+ * a SINGLE app affordance instead of competing "Download APK" + "Install PWA" buttons.
  *
- * Priority:
- *   1. download  — the tenant configured a real APK / store link (tenant.appDownloadUrl,
- *      env NEXT_PUBLIC_APP_DOWNLOAD_URL fallback). Rendered as an external link.
- *   2. install   — no APK link, but the browser can install the PWA (beforeinstallprompt
- *      fired). trigger() shows the native install prompt.
- *   3. ios       — iOS Safari (no beforeinstallprompt) and not already installed.
- *      trigger() opens the "Add to Home Screen" hint (see <IosInstallHint/>).
- *   4. none      — nothing to offer (desktop, not installable, no link) → hide the button.
+ * The installer is ALWAYS offered when the tenant allows it (pwaInstallEnabled !== false)
+ * or an APK/store link is set. It is NOT hidden just because the browser has not fired
+ * beforeinstallprompt yet, or because the app is already installed. Each site is its own
+ * origin, so installing one brand's app never affects another brand's button.
  *
- * The PWA install/ios paths respect tenant.pwaInstallEnabled (owner/tenant can turn the
- * app-install UX off); the APK link is independent and always offered when set.
+ * mode:
+ *   download — tenant configured a real APK / store link (tenant.appDownloadUrl or env
+ *              NEXT_PUBLIC_APP_DOWNLOAD_URL). Rendered as an external link.
+ *   install  — PWA install path. trigger() fires the native prompt when the browser
+ *              offered one (beforeinstallprompt); otherwise it opens a short how-to hint
+ *              so the affordance still works after install / before the event fires.
+ *   ios      — iOS Safari. trigger() opens the "Add to Home Screen" hint.
+ *   none     — only when the tenant turned PWA off AND no APK link is set.
  */
 'use client';
 
@@ -26,31 +28,22 @@ export type GetAppMode = 'download' | 'install' | 'ios' | 'none';
 
 export interface GetApp {
   mode: GetAppMode;
-  /** True when there is something to offer (mode !== 'none'). */
+  /** True when there is an installer to show (mode !== 'none'). */
   available: boolean;
   /** Suggested button label for the current mode. */
   label: string;
   /** Set for mode 'download' — the external APK/store URL to link to. */
   href?: string;
-  /** For mode 'install' / 'ios' — run the install prompt or open the iOS hint. */
+  /** Run the install prompt, open the store link, or show the how-to hint. */
   trigger: () => void;
   iosHintOpen: boolean;
   closeIosHint: () => void;
 }
 
-function isIosSafari(): boolean {
+function isIos(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  const iOS = /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
-  return iOS;
-}
-
-function isStandalone(): boolean {
-  if (typeof window === 'undefined') return false;
-  return (
-    window.matchMedia?.('(display-mode: standalone)').matches ||
-    (window.navigator as unknown as { standalone?: boolean }).standalone === true
-  );
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes('Macintosh') && 'ontouchend' in document);
 }
 
 export function useGetApp(): GetApp {
@@ -64,7 +57,7 @@ export function useGetApp(): GetApp {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    setIos(isIosSafari() && !isStandalone());
+    setIos(isIos());
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
@@ -73,13 +66,15 @@ export function useGetApp(): GetApp {
     return () => window.removeEventListener('beforeinstallprompt', onBIP);
   }, []);
 
+  // Installer stays available whether or not beforeinstallprompt has fired and whether
+  // or not the app is already installed — we never hide it on that basis.
   const mode: GetAppMode = appUrl
     ? 'download'
-    : pwaAllowed && deferred
-      ? 'install'
-      : pwaAllowed && ios
+    : !pwaAllowed
+      ? 'none'
+      : ios
         ? 'ios'
-        : 'none';
+        : 'install';
 
   const trigger = useCallback(() => {
     if (appUrl) {
@@ -91,8 +86,10 @@ export function useGetApp(): GetApp {
       setDeferred(null);
       return;
     }
-    if (ios) setIosHintOpen(true);
-  }, [appUrl, deferred, ios]);
+    // No native prompt to fire (already installed, not yet fired, or unsupported
+    // browser) — show the short how-to-install hint instead of doing nothing.
+    setIosHintOpen(true);
+  }, [appUrl, deferred]);
 
   return {
     mode,
