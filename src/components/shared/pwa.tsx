@@ -20,14 +20,14 @@ import { useEffect, useState } from 'react';
 
 type BIPEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
 
-const ENABLED = process.env.NEXT_PUBLIC_PWA === 'on';
+const ENABLED = process.env.NEXT_PUBLIC_PWA !== 'off';
 const DISMISS_KEY = 'pwa_install_dismissed';
 
 /**
  * @param installBanner  Tenant's `pwaInstallEnabled` (default true). Passed from the
  *   server layout (which already has the tenant) so this component needs no context
  *   and can live outside the providers tree. Controls the banner only — the service
- *   worker still registers whenever NEXT_PUBLIC_PWA=on.
+ *   worker registers by default on every site (set NEXT_PUBLIC_PWA=off to disable).
  */
 export function PWA({ installBanner = true }: { installBanner?: boolean }) {
   // Banner is on unless the tenant explicitly disabled it in their dashboard.
