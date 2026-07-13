@@ -50,6 +50,9 @@ export interface TenantPublicConfig {
   announcementEnabled?: boolean;
   /** Tenant mobile app download link; shows a Download button when set. */
   appDownloadUrl?: string | null;
+  /** PWA installed-app icon (square PNG) + footer install-banner image. */
+  pwaIconUrl?: string | null;
+  pwaBannerUrl?: string | null;
   /** PWA install UX enabled for this tenant (default true). */
   pwaInstallEnabled?: boolean;
   /** App-install presentations: any of 'button' | 'banner' | 'popup' (default ['button']). */

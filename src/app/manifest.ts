@@ -8,7 +8,7 @@ import { resolveTenantFromRequest } from '../core/tenant/serverTenant';
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const tenant = await resolveTenantFromRequest();
-  const icon = tenant.faviconUrl || '/icon.png';
+  const icon = tenant.pwaIconUrl || tenant.faviconUrl || '/icon.png';
   return {
     name: tenant.name,
     short_name: tenant.name,
