@@ -9,6 +9,8 @@
  */
 'use client';
 
+import { RealtimeBonusClaim } from '@/components/shared/RealtimeBonusClaim';
+
 import Link from 'next/link';
 import {
   CreditCard, Banknote, Sparkles, Gift, Users, Trophy, CalendarCheck,
@@ -162,6 +164,7 @@ export default function MyAccountHub() {
           </div>
         </div>
 
+        <RealtimeBonusClaim />
         <Group title="Funds" tiles={FUNDS} />
         <Group title="My Promotion" tiles={promotionTiles} />
         <Group title="History" tiles={HISTORY} />
