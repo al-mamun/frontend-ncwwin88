@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTenant } from '../../../core/tenant/TenantProvider';
+import FooterAppInstall from '../../../components/shared/FooterAppInstall';
 import { useI18n } from '../../../core/i18n/LanguageProvider';
 
 export default function Footer() {
@@ -27,7 +28,9 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="footer">
+    <>
+      <FooterAppInstall />
+      <footer className="footer">
       <div className="container">
 
         {/* About block */}
@@ -184,5 +187,6 @@ export default function Footer() {
         </div>
       </div>
     </footer>
+    </>
   );
 }
