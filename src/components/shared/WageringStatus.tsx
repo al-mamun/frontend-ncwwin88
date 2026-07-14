@@ -36,7 +36,11 @@ export function WageringStatus({ className }: { className?: string }) {
   if (!data || !data.enabled || (data.targetMinor ?? 0) <= 0) return null;
 
   const cleared = (data.remainingMinor ?? 0) <= 0;
-  const pct = data.targetMinor > 0 ? Math.min(100, Math.round(((data.wageredMinor || 0) / data.targetMinor) * 100)) : 100;
+  const wagered = data.wageredMinor || 0;
+  const pct = data.targetMinor > 0 ? Math.min(100, (wagered / data.targetMinor) * 100) : 100;
+  // Give any real progress a visible sliver so the bar never looks empty when the
+  // player has actually wagered something (e.g. 0.27% would otherwise round to 0).
+  const barWidth = cleared ? 100 : wagered > 0 ? Math.max(pct, 3) : 0;
 
   return (
     <div className={`mb-6 rounded-xl border border-gold-soft/30 bg-gradient-to-b from-elevated to-surface p-5 ${className ?? ''}`}>
@@ -54,11 +58,20 @@ export function WageringStatus({ className }: { className?: string }) {
           {cleared ? '✓ Unlocked' : `${money(data.remainingMinor)} left`}
         </span>
       </div>
-      <div className="mt-3 h-2 w-full overflow-hidden rounded bg-black/40">
-        <div className="h-full bg-[linear-gradient(90deg,#ffd60a,#ffb300)]" style={{ width: `${pct}%` }} />
+      <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-black/40 ring-1 ring-white/5">
+        <div
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{
+            width: `${barWidth}%`,
+            background: cleared
+              ? 'linear-gradient(90deg,#22c55e,#16a34a)'
+              : 'linear-gradient(90deg,#ffd60a,#ffb300)',
+          }}
+        />
       </div>
       <p className="mt-2 text-[11px] text-muted">
-        Wagered {money(data.wageredMinor)} of {money(data.targetMinor)}.{cleared ? '' : ' You must finish this before you can withdraw.'}
+        Wagered {money(wagered)} of {money(data.targetMinor)}
+        {' '}({cleared ? '100' : pct.toFixed(pct < 10 ? 2 : 0)}%).{cleared ? '' : ' You must finish this before you can withdraw.'}
       </p>
     </div>
   );

@@ -27,7 +27,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card-badge-label';
-import { ApiRequestError } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { ApiRequestError, apiFetch } from '@/lib/api';
 import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { WithdrawalRequestResponse } from '@/types';
@@ -66,6 +67,18 @@ export default function WithdrawPage() {
     isError: methodsError,
     refetch: refetchMethods,
   } = usePaymentMethods('withdrawal');
+
+  // Wagering (turnover) gate — shares the ['player','wagering'] query with the
+  // WageringStatus banner (react-query dedupes), so this adds no extra request.
+  const { data: wageringView } = useQuery({
+    queryKey: ['player', 'wagering'],
+    queryFn: () =>
+      apiFetch<{ enabled: boolean; remainingMinor: number; targetMinor: number }>('/player/wagering'),
+  });
+  const wageringLocked =
+    !!wageringView?.enabled &&
+    (wageringView?.targetMinor ?? 0) > 0 &&
+    (wageringView?.remainingMinor ?? 0) > 0;
 
   // Form state
   const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
@@ -283,6 +296,16 @@ export default function WithdrawPage() {
 
         <WageringStatus />
 
+        {wageringLocked ? (
+          <div className="rounded-2xl border border-amber-400/30 bg-[#1a1b1e] p-6 text-center">
+            <p className="text-sm font-extrabold text-amber-300">উত্তোলন লক করা আছে (Withdrawal locked)</p>
+            <p className="mt-2 text-xs leading-relaxed text-gray-400">
+              উপরের টার্নওভার শর্ত সম্পূর্ণ করুন — এরপর পেমেন্ট অপশন এখানে দেখা যাবে।
+              <br />
+              Finish the turnover requirement shown above to unlock withdrawals. The payment options will appear here once it reaches 100%.
+            </p>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Step 1: Payment Method */}
           <div className="space-y-3">
@@ -441,6 +464,7 @@ export default function WithdrawPage() {
             </Button>
           )}
         </form>
+        )}
       </div>
 
       {/* Confirmation Dialog */}
