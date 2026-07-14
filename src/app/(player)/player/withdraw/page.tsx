@@ -32,6 +32,7 @@ import { formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { WithdrawalRequestResponse } from '@/types';
 import { useI18n } from '@/core/i18n/LanguageProvider';
+import { WageringStatus } from '@/components/shared/WageringStatus';
 
 function generateIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -279,6 +280,8 @@ export default function WithdrawPage() {
           </span>
           <span className="absolute right-4 bottom-4 text-xs font-bold text-gray-600">BDT</span>
         </div>
+
+        <WageringStatus />
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Step 1: Payment Method */}
