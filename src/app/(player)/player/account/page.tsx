@@ -12,7 +12,7 @@
 
 import Link from 'next/link';
 import {
-  CreditCard, Banknote, Sparkles, Gift, Users, Trophy, CalendarCheck,
+  CreditCard, Banknote, Zap, Sparkles, Gift, Users, Trophy, CalendarCheck,
   ClipboardList, BarChart3, ReceiptText, UserCircle, KeyRound, Mail,
   Facebook, Send, Instagram, Youtube, LogOut, RefreshCw, Wallet, Headphones,
   Info, BadgeCheck, Handshake, Crown, Target, Ticket, Medal, type LucideIcon,
@@ -42,6 +42,7 @@ const FUNDS: Tile[] = [
 ];
 
 const PROMOTION: Tile[] = [
+  { label: 'Real-Time Bonus', icon: Zap, href: '/player/realtime-bonus' },
   { label: 'Promotions', icon: Gift, href: '/player/promotions' },
   { label: 'My Rewards', icon: Sparkles, href: '/player/rewards' },
   { label: 'Coupons', icon: Ticket, href: '/player/coupons' },
