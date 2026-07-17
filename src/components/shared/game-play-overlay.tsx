@@ -6,9 +6,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, X, Wallet, Gamepad, Coins } from 'lucide-react';
+import { ArrowLeft, X, Gamepad, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { formatCurrency } from '@/lib/format';
 import type { Game, GameSession } from '@/types';
 
 interface GamePlayOverlayProps {
@@ -80,12 +79,6 @@ export function GamePlayOverlay({
 
         {/* Right: Wallet Balance display and Exit Icon */}
         <div className="flex items-center gap-3">
-          {isLive && (
-            <div className="flex items-center gap-2 rounded-md border border-gold-soft/30 bg-gold-soft/10 px-3 py-1.5 text-xs font-bold text-gold-soft">
-              <Wallet className="h-3.5 w-3.5" />
-              <span>{formatCurrency(balanceMinor, currency)}</span>
-            </div>
-          )}
           <Button
             onClick={onClose}
             variant="ghost"
