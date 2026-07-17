@@ -56,6 +56,13 @@ export function GamePlayOverlay({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Hide floating page widgets (support button, scroll-to-top) while a game is open
+  // so they don't overlap the game window (CSS in globals.css targets the body class).
+  useEffect(() => {
+    document.body.classList.add('game-overlay-open');
+    return () => document.body.classList.remove('game-overlay-open');
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-base text-primary">
       {/* Dynamic Header Bar */}

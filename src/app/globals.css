@@ -991,3 +991,8 @@ input:-moz-autofill:active {
 html, body, input, select, textarea {
   color-scheme: dark !important;
 }
+
+/* Hide floating widgets (support FAB + scroll-to-top) while a game overlay is open. */
+body.game-overlay-open .scrolltop-btn,
+body.game-overlay-open button[aria-label="Open live chat"],
+body.game-overlay-open button[aria-label="Live chat"] { display: none !important; }
