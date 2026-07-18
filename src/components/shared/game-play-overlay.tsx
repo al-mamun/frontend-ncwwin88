@@ -74,7 +74,7 @@ export function GamePlayOverlay({
           type="button"
           onClick={onClose}
           aria-label="Close game"
-          className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] ring-2 ring-white/85 backdrop-blur-sm transition hover:bg-black/80 active:scale-95"
+          className="absolute right-[calc(env(safe-area-inset-right,0px)+0.5rem)] top-[calc(env(safe-area-inset-top,0px)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] ring-2 ring-white/85 backdrop-blur-sm transition hover:bg-black/80 active:scale-95"
         >
           <X className="h-6 w-6" strokeWidth={2.5} />
         </button>
