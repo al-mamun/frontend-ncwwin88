@@ -4,47 +4,67 @@ import { resolveTenantFromRequest } from '../core/tenant/serverTenant';
 /**
  * Per-tenant installable PWA manifest.
  *
+ * Chrome only offers its native one-tap "Install app" when the manifest declares a
+ * SQUARE icon of at least 192x192 with purpose 'any'. Tenants upload brand logos of
+ * ANY shape (wide banners, short marks), so declaring the raw logo as sizes:'any'
+ * silently fails Chrome's installability check on those brands — the install button
+ * then falls back to a manual "add to home screen" hint instead of the real prompt.
+ * (Confirmed live: a working brand had a 447x447 square logo; broken brands had a
+ * 321x319 and a 367x121 logo declared 'any', and never fired beforeinstallprompt.)
+ *
+ * Fix: when the brand image is Cloudinary-hosted (all dashboard uploads are), pad it
+ * to a real square PNG at 192 and 512 via an on-the-fly transform, so the icon is
+ * BOTH branded AND a valid installable icon regardless of the logo's shape. Non-
+ * Cloudinary images keep the brand icon plus a local square-PNG fallback so the site
+ * still installs. With no brand image at all, the local PNGs are used.
+ *
  * App icon source, in priority order:
- *   1. Dashboard "App logo (home-screen icon)"  -> tenant.pwaIconUrl
- *   2. Tenant branding Logo                      -> tenant.logoUrl
- *   3. Favicon                                   -> tenant.faviconUrl
- *
- * The tenant's own image IS the installed app icon, declared with `sizes: 'any'`
- * so the browser accepts it at whatever pixel dimensions it really is.
- *
- * WHY 'any' and not '512x512': declaring a small/non-square logo as '512x512' is
- * a lie Chrome catches — it rejects the mismatched icon and falls back to the
- * next valid one. Previously that fallback was a generic local /icon-512.png, so
- * EVERY brand installed with the SAME placeholder icon. The local /icon-*.png
- * files are now used ONLY when a tenant configured no image at all, purely to
- * keep the app installable. Each icon is also declared `maskable` so Android
- * renders it edge-to-edge instead of shrinking it onto a white plate.
- *
- * For a crisp home-screen icon, upload a square 512x512 PNG in the dashboard
- * under "App logo (home-screen icon)". If left empty, the branding Logo is used.
+ *   1. Dashboard "App logo (home-screen icon)" -> tenant.pwaIconUrl
+ *   2. Tenant branding Logo                     -> tenant.logoUrl
+ *   3. Favicon                                  -> tenant.faviconUrl
  *
  * NOTE: Next 14's manifest type only accepts a SINGLE purpose per entry, so the
  * `any` and `maskable` variants are listed as separate entries (never 'any maskable').
  */
+
+/**
+ * Pad a Cloudinary upload URL into a square PNG of `size` px, or null when the URL
+ * is not a Cloudinary upload we can transform. `c_pad` keeps the WHOLE logo (never
+ * crops) and fills the remainder; `b_auto` samples an edge colour for the padding.
+ */
+function cloudinarySquare(url: string, size: number): string | null {
+  const m = url.match(/^(https?:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(.+)$/);
+  if (!m) return null;
+  return `${m[1]}c_pad,b_auto,w_${size},h_${size},f_png/${m[2]}`;
+}
+
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const tenant = await resolveTenantFromRequest();
   const brandIcon = tenant.pwaIconUrl || tenant.logoUrl || tenant.faviconUrl || null;
 
-  const icons: MetadataRoute.Manifest['icons'] = [];
-  if (brandIcon) {
-    // Tenant's own image IS the app icon. `sizes: 'any'` = honest about unknown
-    // pixel size; `type` omitted so png / jpg / webp logos are all accepted.
-    icons.push({ src: brandIcon, sizes: 'any', purpose: 'any' });
-    icons.push({ src: brandIcon, sizes: 'any', purpose: 'maskable' });
+  const LOCAL: MetadataRoute.Manifest['icons'] = [
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+  ];
+
+  const sq512 = brandIcon ? cloudinarySquare(brandIcon, 512) : null;
+  const sq192 = brandIcon ? cloudinarySquare(brandIcon, 192) : null;
+
+  let icons: MetadataRoute.Manifest['icons'];
+  if (sq512 && sq192) {
+    // Branded logo padded to guaranteed-square PNGs — installable AND on-brand.
+    icons = [
+      { src: sq192, sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: sq512, sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: sq512, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ];
+  } else if (brandIcon) {
+    // Non-Cloudinary brand image: offer it, plus local squares so install still works.
+    icons = [{ src: brandIcon, sizes: 'any', purpose: 'any' }, ...LOCAL];
   } else {
-    // No brand image configured at all — guaranteed-valid local PNGs keep the
-    // app installable (Chrome still offers its native install prompt).
-    icons.push(
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-    );
+    icons = LOCAL;
   }
 
   return {
