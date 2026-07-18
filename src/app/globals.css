@@ -996,3 +996,10 @@ html, body, input, select, textarea {
 body.game-overlay-open .scrolltop-btn,
 body.game-overlay-open button[aria-label="Open live chat"],
 body.game-overlay-open button[aria-label="Live chat"] { display: none !important; }
+
+/* --- signup form mobile fix: phone + verification-code rows no longer overflow --- */
+.auth-phone, .auth-captcha { min-width: 0; flex-wrap: nowrap; }
+.auth-phone .auth-input, .auth-captcha .auth-input { flex: 1 1 0; min-width: 0; }
+.auth-phone__code, .auth-captcha__code, .auth-captcha__refresh { flex-shrink: 0; }
+.auth-captcha__code { min-width: 58px; padding: 0 12px; letter-spacing: 3px; }
+.auth-input input { width: 100%; min-width: 0; }

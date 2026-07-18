@@ -4,12 +4,24 @@ import { resolveTenantFromRequest } from '../core/tenant/serverTenant';
 /**
  * Per-tenant installable PWA manifest.
  *
- * Icon preference: dashboard PWA icon → SITE LOGO → favicon. The local
- * /icon-512.png and /icon-192.png are ALWAYS included as guaranteed-valid PNG
- * icons — so the PWA is ALWAYS installable (Chrome offers its native install
- * prompt) even when a tenant configured no image (the old '/icon.png' fallback
- * 404'd, which killed installability). Each icon is also declared `maskable` so
- * Android renders it edge-to-edge instead of shrinking it onto a white plate.
+ * App icon source, in priority order:
+ *   1. Dashboard "App logo (home-screen icon)"  -> tenant.pwaIconUrl
+ *   2. Tenant branding Logo                      -> tenant.logoUrl
+ *   3. Favicon                                   -> tenant.faviconUrl
+ *
+ * The tenant's own image IS the installed app icon, declared with `sizes: 'any'`
+ * so the browser accepts it at whatever pixel dimensions it really is.
+ *
+ * WHY 'any' and not '512x512': declaring a small/non-square logo as '512x512' is
+ * a lie Chrome catches — it rejects the mismatched icon and falls back to the
+ * next valid one. Previously that fallback was a generic local /icon-512.png, so
+ * EVERY brand installed with the SAME placeholder icon. The local /icon-*.png
+ * files are now used ONLY when a tenant configured no image at all, purely to
+ * keep the app installable. Each icon is also declared `maskable` so Android
+ * renders it edge-to-edge instead of shrinking it onto a white plate.
+ *
+ * For a crisp home-screen icon, upload a square 512x512 PNG in the dashboard
+ * under "App logo (home-screen icon)". If left empty, the branding Logo is used.
  *
  * NOTE: Next 14's manifest type only accepts a SINGLE purpose per entry, so the
  * `any` and `maskable` variants are listed as separate entries (never 'any maskable').
@@ -20,18 +32,20 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
 
   const icons: MetadataRoute.Manifest['icons'] = [];
   if (brandIcon) {
-    // Real brand image first. `type` omitted so png / jpg / webp logos are all accepted.
-    icons.push({ src: brandIcon, sizes: '512x512', purpose: 'any' });
-    icons.push({ src: brandIcon, sizes: '512x512', purpose: 'maskable' });
-    icons.push({ src: brandIcon, sizes: '192x192', purpose: 'any' });
+    // Tenant's own image IS the app icon. `sizes: 'any'` = honest about unknown
+    // pixel size; `type` omitted so png / jpg / webp logos are all accepted.
+    icons.push({ src: brandIcon, sizes: 'any', purpose: 'any' });
+    icons.push({ src: brandIcon, sizes: 'any', purpose: 'maskable' });
+  } else {
+    // No brand image configured at all — guaranteed-valid local PNGs keep the
+    // app installable (Chrome still offers its native install prompt).
+    icons.push(
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+    );
   }
-  // Guaranteed-valid local PNGs — ensure the app is always installable + maskable.
-  icons.push(
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
-  );
 
   return {
     name: tenant.name,

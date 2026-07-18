@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Real-Time Bonus — dedicated page (rich design).
+ * Real-Time Bonus — dedicated page.
  *
  * Rebate tab is wired to the live turnover-step bonus (`/player/realtime-bonus`):
  * shows the claimable "Available Amount", a Claim button when there's a balance,
@@ -10,13 +10,17 @@
  *
  * Rescue tab is a placeholder (loss-rescue bonus isn't wired yet).
  *
- * Theme-independent colors so it looks the same on every brand.
+ * COLORS: driven entirely by the brand's theme tokens — bg-base/surface/elevated,
+ * text-white/muted, brand + brand-fg, gold-soft and border. The page therefore
+ * wears each site's own colours (e.g. bestbet44's green) instead of a fixed
+ * navy+gold palette. Branded tints use element-level opacity so they work with
+ * CSS-variable colours on every brand.
  */
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Wallet, Play, Receipt } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 
 interface RTBView { totalMinor: number; currency: string; items: { wagerMultiplier: number }[] }
@@ -50,58 +54,64 @@ export default function RealtimeBonusPage() {
 
   const rebate = tab === 'rebate';
   const available = rebate ? data?.totalMinor ?? 0 : 0;
+  const canClaim = available > 0 && rebate;
 
   return (
-    <div className="min-h-screen w-full" style={{ background: 'linear-gradient(180deg,#141c33 0%,#0e1424 100%)' }}>
+    <div className="min-h-screen w-full bg-base text-white">
       {/* Tabs */}
-      <div className="sticky top-0 z-10 flex" style={{ background: 'linear-gradient(180deg,#d9a83022,#0e142400)' }}>
+      <div className="sticky top-0 z-10 flex border-b border-border bg-surface/90 backdrop-blur">
         {(['rebate', 'rescue'] as const).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className="relative flex-1 py-3 text-center text-sm font-bold capitalize transition-colors"
-            style={{ color: tab === t ? '#ffffff' : 'rgba(255,255,255,.5)' }}
+            className={`relative flex-1 py-3.5 text-center text-sm font-bold capitalize transition-colors ${
+              tab === t ? 'text-white' : 'text-muted hover:text-white'
+            }`}
           >
             {t}
-            {tab === t && <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full" style={{ background: '#ffd24a' }} />}
+            {tab === t && (
+              <span className="absolute bottom-0 left-1/2 h-0.5 w-10 -translate-x-1/2 rounded-full bg-gold-soft" />
+            )}
           </button>
         ))}
       </div>
 
-      <div className="mx-auto w-full max-w-xl px-3 pb-8 pt-4">
+      <div className="mx-auto w-full max-w-xl px-3 pb-10 pt-4">
         {/* Hero card */}
-        <div className="relative overflow-hidden rounded-2xl px-4 py-8 text-center" style={{ background: 'radial-gradient(120% 90% at 50% 0%,#1c2748 0%,#131b30 70%)' }}>
-          {/* subtle stars */}
-          <div className="pointer-events-none absolute inset-0 opacity-60"
-            style={{ backgroundImage: 'radial-gradient(1.5px 1.5px at 20% 30%,#ffffff55,transparent),radial-gradient(1.5px 1.5px at 70% 20%,#ffffff44,transparent),radial-gradient(1.5px 1.5px at 85% 60%,#ffffff33,transparent),radial-gradient(1.5px 1.5px at 30% 70%,#ffffff44,transparent),radial-gradient(1.5px 1.5px at 55% 85%,#ffffff33,transparent)' }} aria-hidden />
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-elevated px-4 py-9 text-center shadow-xl">
+          {/* branded glow (element-level opacity so it works with CSS-var colours) */}
+          <div
+            className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-56 w-56 rounded-full opacity-40 blur-3xl"
+            style={{ background: 'radial-gradient(circle, var(--gold-soft), transparent 70%)' }}
+            aria-hidden
+          />
           <div className="relative">
-            <div className="flex items-center justify-center gap-2 text-sm font-medium text-white/90">
-              <Sparkles className="h-4 w-4 text-white" aria-hidden /> Available Amount
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-muted">
+              <Sparkles className="h-3.5 w-3.5 text-gold-soft" aria-hidden /> Available Amount
             </div>
-            <div className="my-5 text-6xl leading-none" aria-hidden>💵</div>
-            <div className="text-3xl font-extrabold text-white">{taka(available)}</div>
 
-            {available > 0 && rebate ? (
-              <button
-                type="button"
-                onClick={() => claim.mutate()}
-                disabled={claim.isPending}
-                className="mt-6 w-full max-w-xs rounded-xl py-3.5 text-base font-extrabold text-black shadow-lg transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: 'linear-gradient(180deg,#f4c752,#c8901f)' }}
-              >
-                {claim.isPending ? 'Claiming…' : `Claim ${taka(available)}`}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => router.push('/')}
-                className="mt-6 w-full max-w-xs rounded-xl py-3.5 text-base font-extrabold text-black shadow-lg transition-opacity hover:opacity-90"
-                style={{ background: 'linear-gradient(180deg,#f4c752,#c8901f)' }}
-              >
-                Play Games
-              </button>
-            )}
+            <div className="mx-auto my-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-surface ring-1 ring-border">
+              <Wallet className="h-9 w-9 text-gold-soft" aria-hidden />
+            </div>
+
+            <div className="text-4xl font-extrabold tracking-tight text-white">{taka(available)}</div>
+
+            <button
+              type="button"
+              onClick={() => (canClaim ? claim.mutate() : router.push('/'))}
+              disabled={claim.isPending}
+              className="mt-7 inline-flex w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-brand py-3.5 text-base font-extrabold text-brand-fg shadow-lg transition hover:opacity-90 active:scale-[.99] disabled:opacity-60"
+              style={{ boxShadow: '0 12px 28px -10px var(--brand)' }}
+            >
+              {canClaim ? (
+                claim.isPending ? 'Claiming…' : `Claim ${taka(available)}`
+              ) : (
+                <>
+                  <Play className="h-4 w-4" aria-hidden /> Play Games
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -111,17 +121,17 @@ export default function RealtimeBonusPage() {
             { label: 'Claimed Today', value: 0 },
             { label: 'Claimed This Week', value: 0 },
           ].map((s) => (
-            <div key={s.label} className="rounded-2xl px-4 py-4 text-center" style={{ background: '#161f38' }}>
-              <div className="text-xs text-white/70">{s.label}</div>
-              <div className="mt-1 text-lg font-extrabold" style={{ color: '#ffd24a' }}>{taka(s.value)}</div>
+            <div key={s.label} className="rounded-2xl border border-border bg-surface px-4 py-4 text-center">
+              <div className="text-xs text-muted">{s.label}</div>
+              <div className="mt-1 text-lg font-extrabold text-gold-soft">{taka(s.value)}</div>
             </div>
           ))}
         </div>
 
         {/* Summary */}
-        <div className="mt-4 rounded-2xl p-4" style={{ background: '#161f38' }}>
+        <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center gap-2">
-            <span className="h-4 w-1.5 rounded-full" style={{ background: '#ffd24a' }} />
+            <span className="h-4 w-1.5 rounded-full bg-gold-soft" />
             <h2 className="text-base font-bold text-white">Summary</h2>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -130,27 +140,26 @@ export default function RealtimeBonusPage() {
                 key={r}
                 type="button"
                 onClick={() => setRange(r)}
-                className="shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                style={
+                className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                   range === r
-                    ? { borderColor: '#ffd24a', background: '#ffd24a1a', color: '#ffd24a' }
-                    : { borderColor: 'rgba(255,255,255,.1)', background: '#0f1830', color: 'rgba(255,255,255,.75)' }
-                }
+                    ? 'border-gold-soft text-gold-soft'
+                    : 'border-border text-muted hover:text-white'
+                } bg-base`}
               >
                 {r}
               </button>
             ))}
           </div>
-          <div className="mt-4 flex min-h-[120px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 text-center">
-            <span className="text-2xl opacity-60" aria-hidden>🧾</span>
-            <p className="mt-2 text-xs text-white/50">No {tab} records for “{range}”.</p>
-            <p className="text-[11px] text-white/40">Play games to earn real-time bonus — it appears here.</p>
+          <div className="mt-4 flex min-h-[132px] flex-col items-center justify-center rounded-xl border border-dashed border-border text-center">
+            <Receipt className="h-6 w-6 text-muted" aria-hidden />
+            <p className="mt-2 text-xs text-muted">No {tab} records for &ldquo;{range}&rdquo;.</p>
+            <p className="text-[11px] text-muted">Play games to earn real-time bonus — it appears here.</p>
           </div>
         </div>
 
-        <p className="mt-4 px-1 text-center text-[11px] leading-relaxed text-white/45">
+        <p className="mt-4 px-1 text-center text-[11px] leading-relaxed text-muted">
           Real-time bonus is cashback earned automatically from your turnover. Every bet you place builds toward
-          your next reward — claim it above when it’s ready.
+          your next reward — claim it above when it&rsquo;s ready.
         </p>
       </div>
     </div>
