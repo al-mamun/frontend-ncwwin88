@@ -11,7 +11,7 @@
  * Rescue tab is a placeholder (loss-rescue bonus isn't wired yet).
  *
  * COLORS: driven entirely by the brand's theme tokens — bg-base/surface/elevated,
- * text-white/muted, brand + brand-fg, gold-soft and border. The page therefore
+ * text-[var(--text-primary)]/muted, brand + brand-fg, gold-soft and border. The page therefore
  * wears each site's own colours (e.g. bestbet44's green) instead of a fixed
  * navy+gold palette. Branded tints use element-level opacity so they work with
  * CSS-variable colours on every brand.
@@ -57,7 +57,7 @@ export default function RealtimeBonusPage() {
   const canClaim = available > 0 && rebate;
 
   return (
-    <div className="min-h-screen w-full bg-base text-white">
+    <div className="min-h-screen w-full bg-base text-[var(--text-primary)]">
       {/* Tabs */}
       <div className="sticky top-0 z-10 flex border-b border-border bg-surface/90 backdrop-blur">
         {(['rebate', 'rescue'] as const).map((t) => (
@@ -66,7 +66,7 @@ export default function RealtimeBonusPage() {
             type="button"
             onClick={() => setTab(t)}
             className={`relative flex-1 py-3.5 text-center text-sm font-bold capitalize transition-colors ${
-              tab === t ? 'text-white' : 'text-muted hover:text-white'
+              tab === t ? 'text-[var(--text-primary)]' : 'text-muted hover:text-[var(--text-primary)]'
             }`}
           >
             {t}
@@ -95,7 +95,7 @@ export default function RealtimeBonusPage() {
               <Wallet className="h-9 w-9 text-gold-soft" aria-hidden />
             </div>
 
-            <div className="text-4xl font-extrabold tracking-tight text-white">{taka(available)}</div>
+            <div className="text-4xl font-extrabold tracking-tight text-[var(--text-primary)]">{taka(available)}</div>
 
             <button
               type="button"
@@ -132,7 +132,7 @@ export default function RealtimeBonusPage() {
         <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
           <div className="flex items-center gap-2">
             <span className="h-4 w-1.5 rounded-full bg-gold-soft" />
-            <h2 className="text-base font-bold text-white">Summary</h2>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">Summary</h2>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {SUMMARY_TABS.map((r) => (
@@ -143,7 +143,7 @@ export default function RealtimeBonusPage() {
                 className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                   range === r
                     ? 'border-gold-soft text-gold-soft'
-                    : 'border-border text-muted hover:text-white'
+                    : 'border-border text-muted hover:text-[var(--text-primary)]'
                 } bg-base`}
               >
                 {r}

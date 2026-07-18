@@ -76,12 +76,32 @@ export default function DepositPage() {
     [accounts, selectedAccountId],
   );
 
-  // Auto-select first account when method changes
-  useEffect(() => {
-    if (accounts && accounts.length > 0) {
-      setSelectedAccountId(accounts[0].id);
+  // Group accounts into Deposit Channels by TYPE — agent = Cash Out, everything
+  // else = Send Money. Only ONE chip per channel type is shown. When a type has
+  // several account numbers, one is picked AT RANDOM per page load, so traffic
+  // rotates across them; the pick is stable for the session and re-rolls on reload.
+  const channels = useMemo(() => {
+    type Acct = NonNullable<typeof accounts>[number];
+    const groups: Record<'cashout' | 'sendmoney', Acct[]> = { cashout: [], sendmoney: [] };
+    for (const a of accounts ?? []) {
+      (a.accountType === 'agent' ? groups.cashout : groups.sendmoney).push(a);
     }
+    const out: Array<{ type: 'cashout' | 'sendmoney'; label: string; account: Acct }> = [];
+    (['cashout', 'sendmoney'] as const).forEach((k) => {
+      if (groups[k].length > 0) {
+        const account = groups[k][Math.floor(Math.random() * groups[k].length)];
+        out.push({ type: k, label: k === 'cashout' ? 'ক্যাশ আউট' : 'সেন্ড মানি', account });
+      }
+    });
+    return out;
   }, [accounts]);
+
+  // Auto-select the first channel's (randomly-picked) account when it changes.
+  useEffect(() => {
+    if (channels.length > 0) {
+      setSelectedAccountId(channels[0].account.id);
+    }
+  }, [channels]);
 
   const minMinor = selectedAccount?.minLimitMinor ?? selectedMethod?.minDepositMinor ?? 10000;
   const maxMinor = selectedAccount?.maxLimitMinor ?? 5000000;
@@ -204,7 +224,7 @@ export default function DepositPage() {
           <Panel title="Promotions">
             <div className="relative">
               <select
-                className="w-full appearance-none rounded-lg border border-border bg-base px-3 py-2.5 text-sm font-semibold text-white focus:border-[var(--brand)] focus:outline-none"
+                className="w-full appearance-none rounded-lg border border-border bg-base px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                 defaultValue="regular"
               >
                 <option value="regular">Regular Deposit</option>
@@ -241,14 +261,14 @@ export default function DepositPage() {
                     )}
                   >
                     {bonus > 0 && (
-                      <span className="absolute left-1.5 top-1.5 rounded bg-rose-600 px-1 py-0.5 text-[8px] font-black leading-none text-white">
+                      <span className="absolute left-1.5 top-1.5 rounded bg-rose-600 px-1 py-0.5 text-[8px] font-black leading-none text-[var(--text-primary)]">
                         +{bonus}%
                       </span>
                     )}
                     {logo ? (
                       <img src={logo} alt={method.name} className="max-h-7 w-auto object-contain" />
                     ) : (
-                      <span className="text-xs font-bold text-white">{method.name}</span>
+                      <span className="text-xs font-bold text-[var(--text-primary)]">{method.name}</span>
                     )}
                     <span className="text-[10px] font-bold text-muted">{method.name}</span>
                   </button>
@@ -257,27 +277,25 @@ export default function DepositPage() {
             </div>
           </Panel>
 
-          {/* Deposit Channel (payment accounts) */}
-          {selectedMethodId && accounts && accounts.length > 0 && (
+          {/* Deposit Channel — one chip per TYPE (Cash Out / Send Money) */}
+          {selectedMethodId && channels.length > 0 && (
             <Panel title="Deposit Channel">
               <div className="grid grid-cols-2 gap-2.5">
-                {accounts.map((acct) => {
-                  const active = selectedAccountId === acct.id;
-                  const isAgent = acct.accountType === 'agent';
-                  const label = acct.displayName || (isAgent ? 'CashOut' : 'SendMoney');
+                {channels.map((ch) => {
+                  const active = selectedAccountId === ch.account.id;
                   return (
                     <button
-                      key={acct.id}
+                      key={ch.type}
                       type="button"
-                      onClick={() => setSelectedAccountId(acct.id)}
+                      onClick={() => setSelectedAccountId(ch.account.id)}
                       className={cn(
                         'rounded-xl border px-3 py-3 text-sm font-bold transition-all',
                         active
                           ? 'border-[var(--brand)] bg-elevated text-[var(--brand)] shadow-md'
-                          : 'border-border bg-base text-white hover:border-[var(--brand)]/60',
+                          : 'border-border bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
                       )}
                     >
-                      {label}
+                      {ch.label}
                     </button>
                   );
                 })}
@@ -290,14 +308,14 @@ export default function DepositPage() {
                     <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
                       {selectedAccount.accountType === 'agent' ? 'ক্যাশ আউট নম্বর' : 'সেন্ড মানি নম্বর'}
                     </div>
-                    <div className="truncate font-mono text-base font-extrabold text-white">
+                    <div className="truncate font-mono text-base font-extrabold text-[var(--text-primary)]">
                       {selectedAccount.accountNumberMasked}
                     </div>
                   </div>
                   <CopyButton
                     value={selectedAccount.accountNumberMasked}
                     label="Copy"
-                    className="flex items-center gap-1 rounded-md border-none bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase text-white transition-all hover:opacity-90"
+                    className="flex items-center gap-1 rounded-md border-none bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase text-[var(--text-primary)] transition-all hover:opacity-90"
                   />
                 </div>
               )}
@@ -325,7 +343,7 @@ export default function DepositPage() {
                         'rounded-lg border py-2.5 text-xs font-bold transition-all',
                         amount === String(val)
                           ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
-                          : 'border-border bg-base text-white hover:border-[var(--brand)]/60',
+                          : 'border-border bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
                       )}
                     >
                       {val.toLocaleString()}
@@ -341,7 +359,7 @@ export default function DepositPage() {
                     placeholder="0.00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-base py-3 pl-8 pr-12 text-sm font-bold text-white focus:border-[var(--brand)] focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-base py-3 pl-8 pr-12 text-sm font-bold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">BDT</span>
                 </div>
@@ -355,7 +373,7 @@ export default function DepositPage() {
                     placeholder="উদাহরণ: ODM2JXXXXX"
                     value={transactionReference}
                     onChange={(e) => setTransactionReference(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-base px-4 py-3 text-sm font-semibold text-white focus:border-[var(--brand)] focus:outline-none"
+                    className="w-full rounded-lg border border-border bg-base px-4 py-3 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                     required
                   />
                   {!transactionReference.trim() && (
@@ -443,7 +461,7 @@ function TabButton({ activeTab, onClick, children }: { activeTab: boolean; onCli
     <button
       type="button"
       onClick={onClick}
-      className={cn('rounded-lg py-2.5 text-sm font-extrabold transition-all', activeTab ? 'text-[#141414]' : 'text-muted hover:text-white')}
+      className={cn('rounded-lg py-2.5 text-sm font-extrabold transition-all', activeTab ? 'text-[#141414]' : 'text-muted hover:text-[var(--text-primary)]')}
       style={activeTab ? { background: 'linear-gradient(180deg, var(--gold-soft), var(--brand))' } : undefined}
     >
       {children}
@@ -456,7 +474,7 @@ function Panel({ title, right, children }: { title: string; right?: React.ReactN
   return (
     <section className="rounded-2xl border border-border bg-surface p-3.5">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-sm font-bold text-white">
+        <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
           <span className="h-3.5 w-1 rounded-full bg-[var(--brand)]" />
           {title}
         </h2>
@@ -477,14 +495,14 @@ function GentleReminder() {
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between px-4 py-3 text-left"
       >
-        <span className="flex items-center gap-2 text-sm font-bold text-white">
+        <span className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
           <span aria-hidden>ⓘ</span> Gentle reminder
         </span>
         <ChevronDown className={cn('h-4 w-4 text-muted transition-transform', open ? 'rotate-180' : '')} />
       </button>
       {open && (
         <div className="border-t border-border px-4 py-3 text-[11px] leading-relaxed text-muted">
-          <p className="mb-1.5 font-semibold text-white">“SSP (Cashout) শুধুমাত্র ক্যাশ-আউটের জন্য।</p>
+          <p className="mb-1.5 font-semibold text-[var(--text-primary)]">“SSP (Cashout) শুধুমাত্র ক্যাশ-আউটের জন্য।</p>
           <p className="mb-1.5">ডিপোজিটে দেরি এড়াতে অনুগ্রহ করে নিচের নির্দেশনাগুলো অনুসরণ করুন:</p>
           <ol className="list-decimal space-y-1 pl-4">
             <li>সঠিক ওয়ালেটে ক্যাশ-আউট করুন (যেমন bKash হলে শুধু bKash-এ)।</li>
@@ -592,7 +610,7 @@ function DepositStatusCard({ deposit, onDismiss }: { deposit: PlayerDeposit; onD
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="flex-shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-elevated hover:text-white"
+          className="flex-shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-elevated hover:text-[var(--text-primary)]"
         >
           <X className="h-4 w-4" />
         </button>
