@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, X, Gamepad, Coins } from 'lucide-react';
+import { X, Gamepad, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Game, GameSession } from '@/types';
 
@@ -64,49 +64,27 @@ export function GamePlayOverlay({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-base text-primary">
-      {/* Dynamic Header Bar */}
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
-        {/* Left: Close button and Title */}
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-muted hover:text-primary"
-            aria-label="Back to Lobby"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h2 className="text-sm font-bold leading-tight">{game.name}</h2>
-            <p className="text-xxs font-semibold uppercase tracking-wider text-muted">{game.provider}</p>
-          </div>
-        </div>
-
-        {/* Right: Wallet Balance display and Exit Icon */}
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 text-danger hover:bg-danger/10"
-            aria-label="Close Game"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Main Game Screen area */}
-      <div className="relative flex-1 overflow-hidden bg-black">
+    <div className="fixed inset-0 z-[100] bg-black text-primary">
+      {/* Full-bleed game area — no top bar; the game fills 100% of the screen. */}
+      <div className="relative h-full w-full overflow-hidden bg-black">
+        {/* Floating close button — pinned to the top-right corner OVER the game.
+            High-contrast (dark disc + white icon + white ring + drop shadow) so it
+            stays clearly visible on any game background, light or dark. */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close game"
+          className="absolute right-3 top-3 z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] ring-2 ring-white/85 backdrop-blur-sm transition hover:bg-black/80 active:scale-95"
+        >
+          <X className="h-6 w-6" strokeWidth={2.5} />
+        </button>
         {isLive ? (
           <>
             <iframe
               src={launchUrl}
               title={game.name}
               onLoad={() => setIframeLoaded(true)}
-              className="h-full w-full border-none display-block"
+              className="block h-full w-full border-none"
               allow="autoplay; fullscreen; encrypted-media; microphone; clipboard-read; clipboard-write"
               allowFullScreen
             />
