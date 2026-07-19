@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Gamepad, Coins } from 'lucide-react';
+import { Gamepad, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Game, GameSession } from '@/types';
 
@@ -64,20 +64,9 @@ export function GamePlayOverlay({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black text-primary">
+    <div className="fixed inset-0 z-[100] bg-black text-primary" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       {/* Full-bleed game area — no top bar; the game fills 100% of the screen. */}
       <div className="relative h-full w-full overflow-hidden bg-black">
-        {/* Floating close button — pinned to the top-right corner OVER the game.
-            High-contrast (dark disc + white icon + white ring + drop shadow) so it
-            stays clearly visible on any game background, light or dark. */}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close game"
-          className="absolute right-[calc(env(safe-area-inset-right,0px)+0.5rem)] top-[calc(env(safe-area-inset-top,0px)+0.5rem)] z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/55 text-white shadow-[0_2px_10px_rgba(0,0,0,0.6)] ring-2 ring-white/85 backdrop-blur-sm transition hover:bg-black/80 active:scale-95"
-        >
-          <X className="h-6 w-6" strokeWidth={2.5} />
-        </button>
         {isLive ? (
           <>
             <iframe
