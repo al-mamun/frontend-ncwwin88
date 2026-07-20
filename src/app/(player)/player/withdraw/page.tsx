@@ -463,6 +463,17 @@ export default function WithdrawPage() {
               {withdrawMutation.isPending ? 'প্রক্রিয়াকরণ হচ্ছে…' : 'সাবমিট'}
             </Button>
           )}
+
+          {/* Backend error (e.g. max amount exceeded, pending request exists) */}
+          {withdrawMutation.isError && (
+            <div className="rounded-xl bg-rose-500/10 border border-rose-500/30 p-4 text-center">
+              <p className="text-sm font-bold text-rose-400">
+                {withdrawMutation.error instanceof ApiRequestError
+                  ? withdrawMutation.error.message
+                  : 'Something went wrong. Please try again.'}
+              </p>
+            </div>
+          )}
         </form>
         )}
       </div>
