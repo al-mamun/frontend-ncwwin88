@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Providers } from './providers';
 import { PWA } from '../components/shared/pwa';
-import SiteLoader from '../components/shared/site-loader';
 import { resolveTenantFromRequest } from '../core/tenant/serverTenant';
 import { getThemeKey } from '../core/theme/applyTheme';
 
@@ -31,8 +30,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={tenant.locale || 'en'} className="dark" data-theme={themeKey}>
       <head>
-        {/* Capture beforeinstallprompt before React hydrates — avoids missing the
-            event when Chrome fires it early (before useEffect listeners register). */}
         <script dangerouslySetInnerHTML={{ __html: `window.__bip=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});` }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -40,7 +37,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.2.3/css/flag-icons.min.css" />
       </head>
       <body>
-        <SiteLoader />
         <Providers tenant={tenant}>{children}</Providers>
         <PWA installBanner={false} />
       </body>
