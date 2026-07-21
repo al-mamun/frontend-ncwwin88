@@ -58,6 +58,10 @@ export function useGetApp(): GetApp {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setIos(isIos());
+    // Pick up the event if it fired before React hydration (captured by the
+    // inline <script> in layout.tsx into window.__bip).
+    const w = window as typeof window & { __bip?: BIPEvent | null };
+    if (w.__bip) { setDeferred(w.__bip); w.__bip = null; }
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);

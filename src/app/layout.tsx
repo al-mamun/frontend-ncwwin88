@@ -31,6 +31,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={tenant.locale || 'en'} className="dark" data-theme={themeKey}>
       <head>
+        {/* Capture beforeinstallprompt before React hydrates — avoids missing the
+            event when Chrome fires it early (before useEffect listeners register). */}
+        <script dangerouslySetInnerHTML={{ __html: `window.__bip=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__bip=e;});` }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
