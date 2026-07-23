@@ -73,7 +73,8 @@ export function useWallet() {
   return useQuery({
     queryKey: queryKeys.wallet,
     queryFn: playerApi.getWallet,
-    refetchInterval: 30_000, // auto-refresh balance every 30s
+    refetchInterval: 5_000, // live balance — auto-refresh every 5s (foreground only)
+    refetchOnWindowFocus: true, // and instantly when the player returns to the site
   });
 }
 
