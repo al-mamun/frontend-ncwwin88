@@ -18,6 +18,12 @@
  * off tenant-side, `onboardingComplete` was already true, so the click bounced
  * straight back to the dashboard while the account page went on displaying an
  * "Unverified" badge the partner had no way to clear.
+ *
+ * Both entry points can also CORRECT the address. A partner whose email or phone
+ * was captured wrong is stuck otherwise: the only thing this page offers is to
+ * send a code to a destination that cannot receive it, and the value is masked,
+ * so they cannot even see what went wrong. `ContactStep` keeps a "change it"
+ * control reachable from every state, verified included.
  */
 'use client';
 
@@ -151,8 +157,8 @@ function OnboardingWizard() {
         </div>
 
         <div className="flex flex-col gap-4">
-          {showEmail && <EmailStep verified={emailDone} optional={!needEmail} target={v.email.value} onDone={refresh} />}
-          {showPhone && <PhoneStep verified={phoneDone} optional={!needPhone} target={v.phone.value} onDone={refresh} />}
+          {showEmail && <ContactStep channel="email" verified={emailDone} optional={!needEmail} target={v.email.value} pending={v.email.pending ?? null} onDone={refresh} />}
+          {showPhone && <ContactStep channel="phone" verified={phoneDone} optional={!needPhone} target={v.phone.value} pending={v.phone.pending ?? null} onDone={refresh} />}
           {showKyc && <KycStep status={v.kyc.status} optional={!needKyc} rejectionReason={v.kyc.rejectionReason} fileUrl={v.kyc.fileUrl} docType={v.kyc.docType} onDone={refresh} />}
         </div>
 
@@ -183,100 +189,147 @@ function OnboardingWizard() {
   );
 }
 
-/* ── Email ── */
-function EmailStep({ verified, optional, target, onDone }: { verified: boolean; optional?: boolean; target: string | null; onDone: () => Promise<void> }) {
+/* ── Email / phone verification, with a way out of a wrong address ──────────
+ *
+ * One component for both channels. They differ only in wording and which three
+ * API calls they make, and keeping them as two near-identical copies is how the
+ * "Resend" button ended up subtly different between them once already.
+ *
+ * The edit affordance is deliberately reachable from EVERY state, including the
+ * verified one. A partner whose address is wrong is precisely the partner who
+ * cannot receive the code that would let them prove a new one, so hiding the
+ * control behind "not yet verified" would leave the only people who need it
+ * unable to reach it.
+ */
+const CONTACT = {
+  email: {
+    title: 'Verify email',
+    hint: "We'll send a 6-digit code to your email.",
+    sentTo: 'your email',
+    undelivered: 'Code generated. (Email delivery may be unconfigured — contact support.)',
+    codeId: 'email-code',
+    fieldId: 'email-new',
+    fieldLabel: 'New email address',
+    placeholder: 'you@example.com',
+    inputMode: 'email' as const,
+    type: 'email',
+    changeCta: 'Wrong email address? Change it',
+    noun: 'address',
+    failed: 'Could not update your email address.',
+  },
+  phone: {
+    title: 'Verify phone',
+    hint: "We'll text a 6-digit code to your phone.",
+    sentTo: 'your phone',
+    undelivered: 'Code generated. (SMS delivery may be unconfigured — contact support.)',
+    codeId: 'phone-code',
+    fieldId: 'phone-new',
+    fieldLabel: 'New phone number',
+    placeholder: '+8801712345678',
+    inputMode: 'tel' as const,
+    type: 'tel',
+    changeCta: 'Wrong phone number? Change it',
+    noun: 'number',
+    failed: 'Could not update your phone number.',
+  },
+};
+
+function ContactStep({ channel, verified, optional, target, pending, onDone }: {
+  channel: 'email' | 'phone';
+  verified: boolean;
+  optional?: boolean;
+  target: string | null;
+  pending: string | null;
+  onDone: () => Promise<void>;
+}) {
+  const t = CONTACT[channel];
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const send = async () => {
-    setErr(null); setMsg(null); setBusy(true);
-    try {
-      const r = await affiliateApi.requestEmailOtp();
-      if (r.alreadyVerified) { await onDone(); return; }
-      setSent(true);
-      setMsg(r.delivered ? `Code sent to ${r.target ?? 'your email'}.` : 'Code generated. (Email delivery may be unconfigured — contact support.)');
-    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : 'Could not send code.'); } finally { setBusy(false); }
-  };
-  const confirm = async () => {
-    setErr(null); setBusy(true);
-    try { await affiliateApi.confirmEmailOtp(code.trim()); await onDone(); }
-    catch (e) { setErr(e instanceof ApiRequestError ? e.message : 'Invalid code.'); } finally { setBusy(false); }
-  };
-
-  return (
-    <Shell done={verified} optional={optional} title={`Verify email${target ? ` (${target})` : ''}`} desc={verified ? undefined : "We'll send a 6-digit code to your email."}>
-      {!verified && (
-        <div className="mt-4 flex flex-col gap-3">
-          {!sent ? (
-            <button onClick={send} disabled={busy} className={GOLD_BTN}>{busy ? 'Sending…' : 'Send code'}</button>
-          ) : (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="email-code" className="text-white/80">Enter code</Label>
-                <Input id="email-code" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" className={FIELD} />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={confirm} disabled={busy || code.length < 4} className={GOLD_BTN}>{busy ? 'Verifying…' : 'Verify'}</button>
-                <button onClick={send} disabled={busy} className={GHOST_BTN}>Resend</button>
-              </div>
-            </>
-          )}
-          {msg && <p className="text-xs text-muted">{msg}</p>}
-          {err && <p className="text-xs text-danger">{err}</p>}
-        </div>
-      )}
-    </Shell>
-  );
-}
-
-/* ── Phone ── */
-function PhoneStep({ verified, optional, target, onDone }: { verified: boolean; optional?: boolean; target: string | null; onDone: () => Promise<void> }) {
-  const [sent, setSent] = useState(false);
-  const [code, setCode] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
+  // A pending address means a code is already in flight from an earlier visit —
+  // the partner should land on the code box, not on "Send code".
+  const awaiting = sent || Boolean(pending);
 
   const send = async () => {
     setErr(null); setMsg(null); setBusy(true);
     try {
-      const r = await affiliateApi.requestPhoneOtp();
+      const r = channel === 'email' ? await affiliateApi.requestEmailOtp() : await affiliateApi.requestPhoneOtp();
       if (r.alreadyVerified) { await onDone(); return; }
       setSent(true);
-      setMsg(r.delivered ? `Code sent to ${r.target ?? 'your phone'}.` : 'Code generated. (SMS delivery may be unconfigured — contact support.)');
+      setMsg(r.delivered ? `Code sent to ${r.target ?? t.sentTo}.` : t.undelivered);
     } catch (e) { setErr(e instanceof ApiRequestError ? e.message : 'Could not send code.'); } finally { setBusy(false); }
   };
+
   const confirm = async () => {
     setErr(null); setBusy(true);
-    try { await affiliateApi.confirmPhoneOtp(code.trim()); await onDone(); }
-    catch (e) { setErr(e instanceof ApiRequestError ? e.message : 'Invalid code.'); } finally { setBusy(false); }
+    try {
+      if (channel === 'email') await affiliateApi.confirmEmailOtp(code.trim());
+      else await affiliateApi.confirmPhoneOtp(code.trim());
+      setSent(false); setCode(''); setMsg(null);
+      await onDone();
+    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : 'Invalid code.'); } finally { setBusy(false); }
   };
 
+  const save = async () => {
+    setErr(null); setMsg(null); setBusy(true);
+    try {
+      const r = channel === 'email' ? await affiliateApi.changeEmail(value.trim()) : await affiliateApi.changePhone(value.trim());
+      setEditing(false); setValue(''); setCode(''); setSent(true);
+      setMsg(
+        (r.delivered ? `Code sent to ${r.target ?? t.sentTo}.` : t.undelivered) +
+        (r.staged ? ` Your current ${t.noun} stays active until you enter it.` : ''),
+      );
+      await onDone();
+    } catch (e) { setErr(e instanceof ApiRequestError ? e.message : t.failed); } finally { setBusy(false); }
+  };
+
+  const desc = pending
+    ? `Enter the code we sent to ${pending} to switch to it. Your current ${t.noun} stays active until you do.`
+    : verified ? undefined : t.hint;
+
   return (
-    <Shell done={verified} optional={optional} title={`Verify phone${target ? ` (${target})` : ''}`} desc={verified ? undefined : "We'll text a 6-digit code to your phone."}>
-      {!verified && (
-        <div className="mt-4 flex flex-col gap-3">
-          {!sent ? (
-            <button onClick={send} disabled={busy} className={GOLD_BTN}>{busy ? 'Sending…' : 'Send code'}</button>
-          ) : (
-            <>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="phone-code" className="text-white/80">Enter code</Label>
-                <Input id="phone-code" inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" className={FIELD} />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={confirm} disabled={busy || code.length < 4} className={GOLD_BTN}>{busy ? 'Verifying…' : 'Verify'}</button>
-                <button onClick={send} disabled={busy} className={GHOST_BTN}>Resend</button>
-              </div>
-            </>
-          )}
-          {msg && <p className="text-xs text-muted">{msg}</p>}
-          {err && <p className="text-xs text-danger">{err}</p>}
-        </div>
-      )}
+    <Shell done={verified} optional={optional} title={`${t.title}${target ? ` (${target})` : ''}`} desc={desc}>
+      <div className="mt-4 flex flex-col gap-3">
+        {editing ? (
+          <>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={t.fieldId} className="text-white/80">{t.fieldLabel}</Label>
+              <Input id={t.fieldId} type={t.type} inputMode={t.inputMode} value={value} onChange={(e) => setValue(e.target.value)} placeholder={t.placeholder} className={FIELD} />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={save} disabled={busy || value.trim().length < 4} className={GOLD_BTN}>{busy ? 'Saving…' : 'Save and send code'}</button>
+              <button onClick={() => { setEditing(false); setErr(null); }} disabled={busy} className={GHOST_BTN}>Cancel</button>
+            </div>
+          </>
+        ) : awaiting ? (
+          <>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor={t.codeId} className="text-white/80">Enter code</Label>
+              <Input id={t.codeId} inputMode="numeric" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" className={FIELD} />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={confirm} disabled={busy || code.length < 4} className={GOLD_BTN}>{busy ? 'Verifying…' : 'Verify'}</button>
+              <button onClick={send} disabled={busy} className={GHOST_BTN}>Resend</button>
+            </div>
+          </>
+        ) : !verified ? (
+          <button onClick={send} disabled={busy} className={GOLD_BTN}>{busy ? 'Sending…' : 'Send code'}</button>
+        ) : null}
+
+        {!editing && (
+          <button type="button" onClick={() => { setEditing(true); setErr(null); setMsg(null); setValue(''); }} className="self-start text-xs font-semibold text-[var(--gold-soft)] underline-offset-2 hover:underline">
+            {t.changeCta}
+          </button>
+        )}
+
+        {msg && <p className="text-xs text-muted">{msg}</p>}
+        {err && <p className="text-xs text-danger">{err}</p>}
+      </div>
     </Shell>
   );
 }

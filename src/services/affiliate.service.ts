@@ -24,8 +24,14 @@ export interface AffiliateProfile {
 }
 
 export interface AffiliateVerification {
-  email: { value: string | null; verified: boolean; required?: boolean };
-  phone: { value: string | null; verified: boolean; required?: boolean };
+  /**
+   * `pending` is an address the partner has asked to move to but has not proven
+   * yet. Optional because a build of this app can run against an API that
+   * predates the field — absent has to read as "no change in flight", never as
+   * an empty pending address.
+   */
+  email: { value: string | null; verified: boolean; required?: boolean; pending?: string | null };
+  phone: { value: string | null; verified: boolean; required?: boolean; pending?: string | null };
   kyc: {
     status: 'none' | 'pending' | 'approved' | 'rejected';
     docType: string | null;
@@ -211,6 +217,25 @@ export const affiliateApi = {
   confirmPhoneOtp(code: string): Promise<{ ok: boolean; verification: AffiliateVerification }> {
     return affiliateFetch('/affiliate/verify/phone/confirm', { method: 'POST', body: JSON.stringify({ code }) });
   },
+  /**
+   * Correct a wrong contact address and get a fresh code sent to the new one.
+   *
+   * One call does both on purpose. Asking a partner to save the corrected value
+   * and then separately press "send code" invites them to stop after the first
+   * step and wonder why nothing arrived — the whole point of this screen is that
+   * the address on file cannot receive anything.
+   *
+   * `staged` comes back true when the CURRENT address was already verified: the
+   * new one is held aside until it is proven, so the partner keeps their access
+   * while the code is in flight.
+   */
+  changeEmail(email: string): Promise<{ ok: boolean; staged: boolean; delivered: boolean; target: string | null; verification: AffiliateVerification }> {
+    return affiliateFetch('/affiliate/verify/email', { method: 'PATCH', body: JSON.stringify({ email }) });
+  },
+  changePhone(phone: string): Promise<{ ok: boolean; staged: boolean; delivered: boolean; target: string | null; verification: AffiliateVerification }> {
+    return affiliateFetch('/affiliate/verify/phone', { method: 'PATCH', body: JSON.stringify({ phone }) });
+  },
+
   uploadKyc(file: File, docType: string): Promise<{ ok: boolean; verification: AffiliateVerification }> {
     const form = new FormData();
     form.append('file', file);
