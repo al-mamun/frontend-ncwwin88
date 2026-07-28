@@ -50,9 +50,31 @@ export interface AffiliateProgramView {
   currency: string;
 }
 
+/**
+ * Optional portal surfaces this tenant has switched on.
+ *
+ * Optional all the way down, and read through `portalFeatures()` rather than
+ * directly: the affiliate portal is deployed independently of the API, so a
+ * build of this app can and does run against a backend that predates the flag.
+ * An absent field has to mean "as it was before", never "off" — otherwise
+ * shipping the frontend first would take a working page away from every
+ * partner until the API caught up.
+ */
+export interface AffiliateFeatures {
+  subAffiliates?: boolean;
+}
+
 export interface AffiliateMe {
   affiliate: AffiliateProfile;
   verification: AffiliateVerification;
+  features?: AffiliateFeatures;
+}
+
+/** Resolved feature switches, with the pre-flag defaults filled in. */
+export function portalFeatures(me: { features?: AffiliateFeatures } | null | undefined): {
+  subAffiliates: boolean;
+} {
+  return { subAffiliates: me?.features?.subAffiliates !== false };
 }
 
 export interface AffiliateStats {

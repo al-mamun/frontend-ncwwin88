@@ -7,5 +7,9 @@ import { AffiliateAuthProvider } from '@/providers/affiliate-auth-provider';
  * affiliate.<tenant> subdomain via the host rewrite in middleware.ts.
  */
 export default function AffiliateLayout({ children }: { children: React.ReactNode }) {
-  return <AffiliateAuthProvider>{children}</AffiliateAuthProvider>;
+  return (
+    <AffiliateAuthProvider>
+      <div className="affiliate-surface">{children}</div>
+    </AffiliateAuthProvider>
+  );
 }

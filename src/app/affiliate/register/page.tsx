@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAffiliateAuth } from '@/providers/affiliate-auth-provider';
 import { useTenant } from '@/core/tenant/TenantProvider';
-import { ApiRequestError } from '@/lib/api';
+import { requestErrorMessage } from '@/lib/api';
 import { COUNTRIES, flagEmoji } from '@/lib/countries';
 import { AffiliateBackground } from '@/components/affiliate/AffiliateBackground';
 import { Input } from '@/components/ui/input';
@@ -52,8 +52,8 @@ export default function AffiliateRegisterPage() {
     setForm((f) => ({ ...f, country: iso, dialCode: c ? c.dial : f.dialCode }));
   };
 
-  const field = 'h-11 border-white/10 bg-[var(--bg-base)]';
-  const selectCls = 'h-11 rounded-md border border-white/10 bg-[var(--bg-base)] px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand';
+  const field = 'h-11 border-white/10 bg-white/5 text-white placeholder:text-white/40';
+  const selectCls = 'h-11 rounded-md border border-white/10 bg-white/5 px-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-brand';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +73,9 @@ export default function AffiliateRegisterPage() {
         country: form.country || undefined,
         tenantSlug: tenant.slug || undefined,
       });
-      router.push('/onboarding');
+      router.push('/affiliate/onboarding');
     } catch (err) {
-      setError(err instanceof ApiRequestError ? err.message : 'Registration failed. Please try again.');
+      setError(requestErrorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function AffiliateRegisterPage() {
       <div className="mx-auto grid min-h-screen max-w-6xl items-stretch gap-0 lg:grid-cols-2">
         {/* Left brand panel */}
         <div className="relative hidden flex-col justify-between overflow-hidden rounded-r-3xl border-r border-white/10 bg-[linear-gradient(160deg,rgba(255,193,7,0.12),rgba(230,57,70,0.08)_55%,transparent)] p-10 lg:flex">
-          <Link href="/" className="flex flex-col items-start gap-1.5">
+          <Link href="/affiliate" className="flex flex-col items-start gap-1.5">
                         <BrandLockup className="h-10 w-auto object-contain" />
             <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-wide text-[var(--gold-soft)]">PARTNERS</span>
           </Link>
@@ -99,7 +99,7 @@ export default function AffiliateRegisterPage() {
             <ul className="mt-7 space-y-3">
               {PERKS.map((p) => (
                 <li key={p} className="flex items-center gap-3 text-sm text-white/90">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand)]/15 text-[var(--gold-soft)]">✓</span> {p}
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--gold-a12)] text-[var(--gold-soft)]">✓</span> {p}
                 </li>
               ))}
             </ul>
@@ -113,7 +113,7 @@ export default function AffiliateRegisterPage() {
         <div className="flex items-center justify-center px-4 py-10 md:px-8">
           <div className="w-full max-w-md">
             <div className="mb-5 flex flex-col items-center text-center lg:hidden">
-              <Link href="/">
+              <Link href="/affiliate">
                                 <BrandLockup className="h-11 w-auto object-contain" />
               </Link>
             </div>
@@ -136,9 +136,9 @@ export default function AffiliateRegisterPage() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="country" className="text-white/80">Country</Label>
                   <select id="country" value={form.country} onChange={onCountry} className={selectCls}>
-                    <option value="" className="bg-[var(--bg-elevated)]">Select your country</option>
+                    <option value="" className="bg-[#14201a] text-white">Select your country</option>
                     {sortedCountries.map((c) => (
-                      <option key={c.iso} value={c.iso} className="bg-[var(--bg-elevated)]">{flagEmoji(c.iso)} {c.name}</option>
+                      <option key={c.iso} value={c.iso} className="bg-[#14201a] text-white">{flagEmoji(c.iso)} {c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -147,7 +147,7 @@ export default function AffiliateRegisterPage() {
                   <div className="flex gap-2">
                     <select aria-label="Dial code" value={form.dialCode} onChange={set('dialCode')} className={`${selectCls} w-32 shrink-0`}>
                       {dialOptions.map((c) => (
-                        <option key={`${c.iso}${c.dial}`} value={c.dial} className="bg-[var(--bg-elevated)]">{flagEmoji(c.iso)} {c.dial}</option>
+                        <option key={`${c.iso}${c.dial}`} value={c.dial} className="bg-[#14201a] text-white">{flagEmoji(c.iso)} {c.dial}</option>
                       ))}
                     </select>
                     <Input id="phoneNumber" type="tel" value={form.phoneNumber} onChange={set('phoneNumber')} required inputMode="numeric" autoComplete="tel-national" placeholder="1XXXXXXXXX" className={`${field} flex-1`} />
@@ -163,14 +163,14 @@ export default function AffiliateRegisterPage() {
                     <Input id="confirm" type="password" value={form.confirm} onChange={set('confirm')} required autoComplete="new-password" placeholder="••••••••" className={field} />
                   </div>
                 </div>
-                {error && <div className="rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</div>}
+                {error && <div className="rounded-lg border border-[var(--danger-a35)] bg-[var(--danger-a12)] px-3 py-2 text-sm text-danger">{error}</div>}
                 <button type="submit" disabled={loading} className="mt-2 h-11 rounded-xl bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] font-bold text-[var(--bg-base)] shadow-[0_10px_24px_-10px_rgba(255,193,7,0.7)] transition-transform hover:-translate-y-0.5 disabled:opacity-60">
                   {loading ? 'Creating account…' : 'Create affiliate account'}
                 </button>
               </form>
               <p className="mt-6 text-center text-sm text-muted">
                 Already a partner?{' '}
-                <Link href="/login" className="font-semibold text-[var(--gold-soft)] hover:underline">Sign in</Link>
+                <Link href="/affiliate/login" className="font-semibold text-[var(--gold-soft)] hover:underline">Sign in</Link>
               </p>
             </div>
           </div>

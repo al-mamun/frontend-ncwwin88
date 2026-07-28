@@ -1,3 +1,4 @@
+/* redeploy: 2026-07-02 - force Vercel rebuild (PARTNERS badge stack under logo) */
 /**
  * Affiliate program marketing landing (affiliate.<tenant> / /affiliate).
  * Premium, industry-standard iGaming affiliate landing: layered gradient hero
@@ -11,9 +12,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useTenant } from '@/core/tenant/TenantProvider';
 import { apiFetch } from '@/lib/api';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAffiliateAuth } from '@/providers/affiliate-auth-provider';
+import { copyrightYear } from '@/lib/format';
 
 interface PublicProgram {
   id: string; name: string; description: string | null; model: string;
@@ -88,12 +87,6 @@ const FAQS = [
 
 export default function AffiliateLandingPage() {
   const { tenant } = useTenant();
-  const { me, loading } = useAffiliateAuth();
-  const router = useRouter();
-  useEffect(() => {
-    // A signed-in affiliate landing on the marketing page → go to their dashboard.
-    if (!loading && me) router.replace('/dashboard');
-  }, [loading, me, router]);
   const brandName = tenant.name && tenant.name.toLowerCase() !== 'casino' ? tenant.name : 'our brand';
 
   // Real tenant programs power the commission tiers (fallback to the generic set).
@@ -127,8 +120,8 @@ export default function AffiliateLandingPage() {
             <a href="#faq" className="transition-colors hover:text-white">FAQ</a>
           </nav>
           <div className="flex items-center gap-2.5">
-            <Link href="/login" className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5">Sign in</Link>
-            <Link href="/register" className="rounded-lg bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-4 py-2 text-sm font-bold text-[var(--bg-base)] shadow-[0_8px_24px_-8px_rgba(255,193,7,0.6)] transition-transform hover:-translate-y-0.5">Join now</Link>
+            <Link href="/affiliate/login" className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/5">Sign in</Link>
+            <Link href="/affiliate/register" className="rounded-lg bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-4 py-2 text-sm font-bold text-[var(--bg-base)] shadow-[0_8px_24px_-8px_rgba(255,193,7,0.6)] transition-transform hover:-translate-y-0.5">Join now</Link>
           </div>
         </header>
 
@@ -153,11 +146,11 @@ export default function AffiliateLandingPage() {
         {tenant.affiliateHeroEnabled !== false && (
         <section className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-10 pt-10 md:px-8 md:pb-20 md:pt-16 lg:grid-cols-2">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--brand)]/30 bg-[var(--brand)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--gold-soft)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--gold-a35)] bg-[var(--gold-a12)] px-3 py-1.5 text-xs font-semibold text-[var(--gold-soft)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--gold-soft)]" /> Official Affiliate Program
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-5xl">
-              <span className="block md:whitespace-nowrap">Turn your traffic into</span>
+            <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] tracking-tight sm:text-4xl md:text-5xl">
+              <span className="block">Turn your traffic into</span>
               <span className="block bg-[linear-gradient(90deg,var(--gold-soft),var(--brand-2-dark),var(--danger))] bg-clip-text text-transparent">recurring revenue.</span>
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-muted">
@@ -165,10 +158,10 @@ export default function AffiliateLandingPage() {
               with transparent real-time tracking and fast, reliable weekly payouts.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href="/register" className="rounded-xl bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-7 py-3.5 text-[1rem] font-bold !text-[var(--bg-base)] shadow-[0_12px_30px_-10px_rgba(255,193,7,0.7)] transition-transform hover:-translate-y-0.5">
+              <Link href="/affiliate/register" className="rounded-xl bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-7 py-3.5 text-[1rem] font-bold !text-[var(--bg-base)] shadow-[0_12px_30px_-10px_rgba(255,193,7,0.7)] transition-transform hover:-translate-y-0.5">
                 Become a partner
               </Link>
-              <Link href="/login" className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10">
+              <Link href="/affiliate/login" className="rounded-xl border border-white/15 bg-white/5 px-7 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10">
                 Partner login
               </Link>
             </div>
@@ -189,7 +182,7 @@ export default function AffiliateLandingPage() {
                   <p className="text-xs text-muted">Available balance</p>
                   <p className="mt-1 text-3xl font-extrabold text-white">BDT 84,250<span className="text-base font-semibold text-muted">.00</span></p>
                 </div>
-                <span className="rounded-full bg-[var(--danger)]/15 px-3 py-1 text-xs font-bold text-[#ff6b75]">+18.4%</span>
+                <span className="rounded-full bg-[var(--danger-a12)] px-3 py-1 text-xs font-bold text-[#ff6b75]">+18.4%</span>
               </div>
               {/* bar chart */}
               <div className="mt-6 flex h-32 items-end gap-2">
@@ -236,7 +229,7 @@ export default function AffiliateLandingPage() {
             {plans.map((p) => (
               <div
                 key={p.name}
-                className={`relative rounded-2xl border p-7 ${p.featured ? 'border-[var(--brand)]/50 bg-[linear-gradient(180deg,rgba(255,193,7,0.10),rgba(18,24,41,0.6))] shadow-[0_20px_50px_-20px_rgba(255,193,7,0.5)]' : 'border-white/10 bg-[var(--bg-elevated)]'}`}
+                className={`relative rounded-2xl border p-7 ${p.featured ? 'border-[var(--gold-a55)] bg-[linear-gradient(180deg,rgba(255,193,7,0.10),rgba(18,24,41,0.6))] shadow-[0_20px_50px_-20px_rgba(255,193,7,0.5)]' : 'border-white/10 bg-[var(--bg-elevated)]'}`}
               >
                 {p.featured && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-3 py-1 text-xs font-bold text-[var(--bg-base)]">{p.tag}</span>
@@ -251,7 +244,7 @@ export default function AffiliateLandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" className={`mt-7 block rounded-xl px-5 py-3 text-center text-sm font-bold transition-transform hover:-translate-y-0.5 ${p.featured ? 'bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] text-[var(--bg-base)]' : 'border border-white/15 bg-white/5 text-white hover:bg-white/10'}`}>
+                <Link href="/affiliate/register" className={`mt-7 block rounded-xl px-5 py-3 text-center text-sm font-bold transition-transform hover:-translate-y-0.5 ${p.featured ? 'bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] text-[var(--bg-base)]' : 'border border-white/15 bg-white/5 text-white hover:bg-white/10'}`}>
                   Get started
                 </Link>
               </div>
@@ -269,9 +262,9 @@ export default function AffiliateLandingPage() {
             {BENEFITS.map((b) => {
               const Icon = b.icon;
               return (
-                <div key={b.title} className="group rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6 transition-colors hover:border-[var(--brand)]/40">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--brand)]/12 text-[var(--gold-soft)]">
-                    <Icon className="h-5.5 w-5.5" />
+                <div key={b.title} className="group rounded-2xl border border-white/10 bg-[var(--bg-elevated)] p-6 transition-colors hover:border-[var(--gold-a35)]">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--gold-a12)] text-[var(--gold-soft)]">
+                    <Icon className="h-[22px] w-[22px]" />
                   </div>
                   <h3 className="mt-4 text-lg font-semibold text-white">{b.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted">{b.body}</p>
@@ -328,14 +321,14 @@ export default function AffiliateLandingPage() {
 
         {/* ── Final CTA ── */}
         <section className="mx-auto max-w-7xl px-5 pb-20 md:px-8">
-          <div className="overflow-hidden rounded-3xl border border-[var(--brand)]/30 bg-[linear-gradient(135deg,var(--bg-surface),var(--bg-elevated))] p-10 text-center md:p-16">
+          <div className="overflow-hidden rounded-3xl border border-[var(--gold-a35)] bg-[linear-gradient(135deg,var(--bg-surface),var(--bg-elevated))] p-10 text-center md:p-16">
             <h2 className="text-3xl font-extrabold md:text-5xl">Ready to start earning?</h2>
             <p className="mx-auto mt-4 max-w-xl text-muted">Join thousands of partners growing their income with {brandName}. It&apos;s free, fast and built to pay you on time.</p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/register" className="rounded-xl bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-8 py-4 text-[1rem] font-bold !text-[var(--bg-base)] shadow-[0_12px_30px_-10px_rgba(255,193,7,0.7)] transition-transform hover:-translate-y-0.5">
+              <Link href="/affiliate/register" className="rounded-xl bg-[linear-gradient(180deg,var(--gold-soft),var(--brand-2-dark))] px-8 py-4 text-[1rem] font-bold !text-[var(--bg-base)] shadow-[0_12px_30px_-10px_rgba(255,193,7,0.7)] transition-transform hover:-translate-y-0.5">
                 Create your partner account
               </Link>
-              <Link href="/login" className="rounded-xl border border-white/15 bg-white/5 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-white/10">
+              <Link href="/affiliate/login" className="rounded-xl border border-white/15 bg-white/5 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-white/10">
                 I already have an account
               </Link>
             </div>
@@ -349,7 +342,7 @@ export default function AffiliateLandingPage() {
                             <BrandLockup className="h-7 w-auto object-contain opacity-90" />
               <span>Affiliate Program</span>
             </div>
-            <p>© {new Date().getFullYear()} {tenant.name}. Partners must be 18+. Play and promote responsibly. Terms apply.</p>
+            <p>© {copyrightYear()} {tenant.name}. Partners must be 18+. Play and promote responsibly. Terms apply.</p>
           </div>
         </footer>
       </div>

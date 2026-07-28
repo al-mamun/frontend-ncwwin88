@@ -24,6 +24,27 @@ export class ApiRequestError extends Error {
   }
 }
 
+/**
+ * The message to show for an error caught around a user-triggered request.
+ *
+ * `ApiRequestError` means the server answered and told us why, so its own
+ * message is the truthful one. Anything else escaping a `fetch` is a transport
+ * failure — nothing listening on the API host, the wrong port, or an origin the
+ * backend's CORS allow-list rejects — and for security reasons the browser
+ * hands JavaScript no detail beyond `TypeError: Failed to fetch`.
+ *
+ * Collapsing those two into one message is not cosmetic, and sign-in is where
+ * it bites hardest: "Sign in failed. Please try again." reads as "wrong
+ * password", so the user retypes credentials that were never transmitted
+ * anywhere, while the real fault is that the request never left the browser.
+ * Naming the transport case points at the one thing that can actually be fixed.
+ */
+export function requestErrorMessage(err: unknown, fallback = 'Something went wrong. Please try again.'): string {
+  if (err instanceof ApiRequestError) return err.message;
+  if (err instanceof TypeError) return "Can't reach the server. Check your connection and try again.";
+  return fallback;
+}
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000/api/v1';
 
