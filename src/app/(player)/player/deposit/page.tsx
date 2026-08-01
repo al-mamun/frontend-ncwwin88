@@ -11,7 +11,9 @@
  */
 'use client';
 
+import * as React from 'react';
 import { useState, useMemo, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Clock, CheckCircle2, XCircle, X, ChevronDown } from 'lucide-react';
 import {
@@ -24,6 +26,7 @@ import { PageContainer, LoadingState, ErrorState, EmptyState } from '@/component
 import { RequestSuccess, CopyButton } from '@/components/shared/payment-components';
 import { Button } from '@/components/ui/button';
 import { ApiRequestError } from '@/lib/api';
+import { playerApi } from '@/services/player.service';
 import { useI18n } from '@/core/i18n/LanguageProvider';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/format';
@@ -42,6 +45,7 @@ const AMOUNT_PRESETS = [200, 500, 1000, 5000, 10000, 15000, 20000, 25000, 30000]
 export default function DepositPage() {
   const router = useRouter();
   const { t } = useI18n();
+  const qc = useQueryClient();
 
   // Data queries
   const {
@@ -71,6 +75,18 @@ export default function DepositPage() {
     [methods, selectedMethodId],
   );
 
+  /*
+   * Gateway methods are paid on a hosted checkout page, so they skip the whole
+   * manual apparatus: no channel to pick, no agent number to copy, no
+   * transaction id to type. The flag is derived server-side — the browser never
+   * sees the gateway's credentials.
+   */
+  const isGatewayMethod = Boolean(selectedMethod?.isGateway);
+  const [gatewayError, setGatewayError] = useState<string | null>(null);
+  const [gatewayResult, setGatewayResult] =
+    useState<{ state: 'checking' | 'paid' | 'failed' | 'slow' | 'cancelled' } | null>(null);
+  const [redirecting, setRedirecting] = useState(false);
+
   const selectedAccount = useMemo(
     () => accounts?.find((a) => a.id === selectedAccountId) ?? null,
     [accounts, selectedAccountId],
@@ -95,6 +111,116 @@ export default function DepositPage() {
     });
     return out;
   }, [accounts]);
+
+  /**
+   * Poll one gateway deposit until it resolves.
+   *
+   * Used by both routes into this page: the new-tab flow (the player never
+   * left, so this tab watches while they pay next door) and the legacy
+   * return-URL flow. The provider sends no webhook, so polling is the only way
+   * to notice — and the backend sweep is the backstop if the player closes
+   * everything.
+   *
+   * It is patient by design. Confirmation depends on an SMS reaching the
+   * merchant's phone, which can lag well behind the payment, so it polls for
+   * ~5 minutes and then hands over to the sweep rather than calling it failed.
+   */
+  const watchGatewayDeposit = React.useCallback((depositId: string) => {
+    let attempt = 0;
+    let stopped = false;
+    const tick = async () => {
+      attempt += 1;
+      try {
+        const res = await playerApi.getGatewayDepositStatus(depositId);
+        if (stopped) return;
+        if (res.status === 'approved') {
+          setGatewayResult({ state: 'paid' });
+          qc.invalidateQueries({ queryKey: ['wallet'] });
+          qc.invalidateQueries({ queryKey: ['deposits'] });
+          return;
+        }
+        if (res.status === 'rejected' || res.status === 'cancelled') {
+          setGatewayResult({ state: 'failed' });
+          qc.invalidateQueries({ queryKey: ['deposits'] });
+          return;
+        }
+      } catch {
+        // A transient error must never be shown to the player as a failure.
+      }
+      if (!stopped) {
+        if (attempt < 100) setTimeout(tick, 3000);
+        else setGatewayResult({ state: 'slow' });
+      }
+    };
+    void tick();
+    return () => { stopped = true; };
+  }, [qc]);
+
+  /*
+   * RETURNING FROM THE HOSTED CHECKOUT.
+   *
+   * The provider sends no webhook, so the player's return is the FIRST chance to
+   * credit them — the backend also sweeps, which covers anyone who closes the
+   * tab. Confirmation is SMS-driven and can lag a few seconds behind the
+   * redirect, so poll briefly rather than reading once and declaring failure.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const gw = params.get('gw');
+    if (!gw) return;
+    /*
+     * Cancelled at the checkout. The deposit row already exists — it was created
+     * before the redirect so its id could be the order reference — so it has to
+     * be withdrawn, or the player is left staring at "we are verifying your
+     * payment" for money they never sent, and an admin gets a phantom row to
+     * chase. The backend still asks the provider first, in case they paid and
+     * then hit cancel.
+     */
+    if (params.get('cancelled') === '1') {
+      setGatewayResult({ state: 'cancelled' });
+      void playerApi
+        .cancelGatewayDeposit(gw)
+        .then((res) => {
+          if (res.status === 'approved') setGatewayResult({ state: 'paid' });
+          qc.invalidateQueries({ queryKey: ['deposits'] });
+          qc.invalidateQueries({ queryKey: ['wallet'] });
+        })
+        .catch(() => undefined);
+      return;
+    }
+
+    let cancelled = false;
+    let attempt = 0;
+    setGatewayResult({ state: 'checking' });
+
+    const poll = async () => {
+      attempt += 1;
+      try {
+        const res = await playerApi.getGatewayDepositStatus(gw);
+        if (cancelled) return;
+        if (res.status === 'approved') {
+          setGatewayResult({ state: 'paid' });
+          qc.invalidateQueries({ queryKey: ['wallet'] });
+          qc.invalidateQueries({ queryKey: ['deposits'] });
+          return;
+        }
+        if (res.status === 'rejected') {
+          setGatewayResult({ state: 'failed' });
+          return;
+        }
+      } catch {
+        // Keep polling: a transient error must not be shown as a failed payment.
+      }
+      if (!cancelled) {
+        // ~30s of patience, then hand over to the backend sweep.
+        if (attempt < 10) setTimeout(poll, 3000);
+        else setGatewayResult({ state: 'slow' });
+      }
+    };
+    void poll();
+    return () => { cancelled = true; };
+  }, [qc]);
 
   // Auto-select the first channel's (randomly-picked) account when it changes.
   useEffect(() => {
@@ -137,7 +263,65 @@ export default function DepositPage() {
 
   async function handleVerificationSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmitDeposit || !selectedMethod) return;
+    if (!selectedMethod) return;
+
+    /*
+     * Gateway path: create the deposit server-side and hand the player to the
+     * provider's checkout. Nothing is credited here — the wallet moves only
+     * when the provider confirms the payment, either when the player comes
+     * back or via the backend's sweep if they close the tab.
+     */
+    if (isGatewayMethod) {
+      const minor = Math.round(parseFloat(amount) * 100);
+      if (!minor || amountError) return;
+      setGatewayError(null);
+      setRedirecting(true);
+
+      /*
+       * OPEN THE CHECKOUT IN A NEW TAB RATHER THAN NAVIGATING AWAY.
+       *
+       * Session auth is httpOnly cookies on api.superparibet.com while the site
+       * is mcwwin87.com — third-party cookies. Sending the player off to the
+       * provider's domain and back is a cross-site round trip, and browsers drop
+       * the storage-access grant that keeps those cookies flowing: the player
+       * came back to a page that 401'd on every call and looked logged out.
+       *
+       * Keeping this tab alive sidesteps that entirely. It is also better for
+       * the player, who keeps their place instead of being bounced through two
+       * redirects.
+       *
+       * The window MUST be opened synchronously inside the click handler —
+       * calling window.open() after an await is treated as a popup and blocked.
+       * So it is opened blank first and pointed at the URL once we have it.
+       */
+      const checkoutWindow = window.open('', '_blank');
+      try {
+        const res = await playerApi.startGatewayDeposit(
+          { paymentMethodId: selectedMethod.id, amount: minor, currency: selectedMethod.currency },
+          generateIdempotencyKey(),
+        );
+        if (checkoutWindow && !checkoutWindow.closed) {
+          checkoutWindow.location.href = res.paymentUrl;
+          // Watch the deposit from here; the other tab only takes the payment.
+          setGatewayResult({ state: 'checking' });
+          watchGatewayDeposit(res.id);
+        } else {
+          // Popup blocked — fall back to navigating, which still works; the
+          // player may just have to sign in again on the way back.
+          window.location.href = res.paymentUrl;
+        }
+      } catch (err) {
+        if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
+        setRedirecting(false);
+        setGatewayError(
+          err instanceof ApiRequestError ? err.message : 'পেমেন্ট শুরু করা যায়নি। আবার চেষ্টা করুন।',
+        );
+      }
+      setRedirecting(false);
+      return;
+    }
+
+    if (!canSubmitDeposit) return;
 
     const minor = Math.round(parseFloat(amount) * 100);
     depositMutation.mutate(
@@ -220,11 +404,14 @@ export default function DepositPage() {
         <div className="space-y-4 p-3 sm:p-4">
           <DepositStatusTracker />
 
+          {/* Outcome of a hosted-checkout payment the player just came back from. */}
+          {gatewayResult && <GatewayResultBanner state={gatewayResult.state} />}
+
           {/* Promotions */}
           <Panel title="Promotions">
             <div className="relative">
               <select
-                className="w-full appearance-none rounded-lg border border-border bg-base px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
+                className="w-full appearance-none border-[0.5px] border-white/25 bg-base px-3 py-2.5 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                 defaultValue="regular"
               >
                 <option value="regular">Regular Deposit</option>
@@ -246,25 +433,20 @@ export default function DepositPage() {
                     : name.includes('rocket') ? '/assets/rocket_logo.png'
                     : name.includes('upay') ? '/assets/upay.webp'
                     : null);
-                const bonus = (method as { bonusPercent?: number; depositBonusPercent?: number }).bonusPercent
-                  ?? (method as { depositBonusPercent?: number }).depositBonusPercent ?? 0;
                 return (
                   <button
                     key={method.id}
                     type="button"
                     onClick={() => selectMethod(method.id)}
                     className={cn(
-                      'relative flex h-[78px] flex-col items-center justify-center gap-1 rounded-xl border p-2 transition-all',
+                      'relative flex h-[78px] flex-col items-center justify-center gap-1 border-[0.5px] p-2 transition-all',
                       active
-                        ? 'border-[var(--brand)] bg-elevated shadow-md'
-                        : 'border-border bg-base hover:border-[var(--brand)]/60',
+                        ? 'border-[var(--brand)] bg-elevated'
+                        : 'border-[0.5px] border-white/25 bg-base hover:border-[var(--brand)]/60',
                     )}
                   >
-                    {bonus > 0 && (
-                      <span className="absolute left-1.5 top-1.5 rounded bg-rose-600 px-1 py-0.5 text-[8px] font-black leading-none text-[var(--text-primary)]">
-                        +{bonus}%
-                      </span>
-                    )}
+                    {isMobileMoney(method.name) && <PrizeRibbon />}
+                    {active && <SelectedCorner />}
                     {logo ? (
                       <img src={logo} alt={method.name} className="max-h-7 w-auto object-contain" />
                     ) : (
@@ -275,10 +457,20 @@ export default function DepositPage() {
                 );
               })}
             </div>
+
+            {/* Selected method banner, e.g. "bKash Payment". */}
+            {selectedMethod && (
+              <div
+                className="mt-2.5 w-full py-3 text-center text-sm font-extrabold text-[#141414]"
+                style={{ background: 'linear-gradient(180deg, var(--gold-soft), var(--brand))' }}
+              >
+                {selectedMethod.name} Payment
+              </div>
+            )}
           </Panel>
 
           {/* Deposit Channel — one chip per TYPE (Cash Out / Send Money) */}
-          {selectedMethodId && channels.length > 0 && (
+          {selectedMethodId && !isGatewayMethod && channels.length > 0 && (
             <Panel title="Deposit Channel">
               <div className="grid grid-cols-2 gap-2.5">
                 {channels.map((ch) => {
@@ -289,13 +481,14 @@ export default function DepositPage() {
                       type="button"
                       onClick={() => setSelectedAccountId(ch.account.id)}
                       className={cn(
-                        'rounded-xl border px-3 py-3 text-sm font-bold transition-all',
+                        'relative border-[0.5px] px-3 py-3 text-sm font-bold transition-all',
                         active
-                          ? 'border-[var(--brand)] bg-elevated text-[var(--brand)] shadow-md'
-                          : 'border-border bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
+                          ? 'border-[var(--brand)] bg-elevated text-[var(--brand)]'
+                          : 'border-[0.5px] border-white/25 bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
                       )}
                     >
                       {ch.label}
+                      {active && <SelectedCorner />}
                     </button>
                   );
                 })}
@@ -303,7 +496,7 @@ export default function DepositPage() {
 
               {/* Selected channel's number to send money to */}
               {selectedAccount && (
-                <div className="mt-3 flex items-center justify-between rounded-xl border border-border bg-base px-4 py-3">
+                <div className="mt-3 flex items-center justify-between border-[0.5px] border-border bg-base px-4 py-3">
                   <div className="min-w-0">
                     <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
                       {selectedAccount.accountType === 'agent' ? 'ক্যাশ আউট নম্বর' : 'সেন্ড মানি নম্বর'}
@@ -315,7 +508,7 @@ export default function DepositPage() {
                   <CopyButton
                     value={selectedAccount.accountNumberMasked}
                     label="Copy"
-                    className="flex items-center gap-1 rounded-md border-none bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase text-[var(--text-primary)] transition-all hover:opacity-90"
+                    className="flex items-center gap-1 border-none bg-elevated px-3 py-1.5 text-[10px] font-bold uppercase text-[var(--text-primary)] transition-all hover:opacity-90"
                   />
                 </div>
               )}
@@ -323,7 +516,7 @@ export default function DepositPage() {
           )}
 
           {/* Deposit Amount + Transaction + Submit */}
-          {selectedAccountId && (
+          {(selectedAccountId || isGatewayMethod) && (
             <form onSubmit={handleVerificationSubmit} className="space-y-4">
               <Panel
                 title="Deposit Amount"
@@ -340,10 +533,10 @@ export default function DepositPage() {
                       type="button"
                       onClick={() => setAmount(String(val))}
                       className={cn(
-                        'rounded-lg border py-2.5 text-xs font-bold transition-all',
+                        'border-[0.5px] py-2.5 text-xs font-bold transition-all',
                         amount === String(val)
                           ? 'border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]'
-                          : 'border-border bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
+                          : 'border-[0.5px] border-white/25 bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
                       )}
                     >
                       {val.toLocaleString()}
@@ -359,21 +552,21 @@ export default function DepositPage() {
                     placeholder="0.00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-base py-3 pl-8 pr-12 text-sm font-bold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
+                    className="w-full border-[0.5px] border-white/25 bg-base py-3 pl-8 pr-12 text-sm font-bold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted">BDT</span>
                 </div>
                 {amountError && <p className="mt-1.5 text-xs font-bold text-rose-500">{amountError}</p>}
               </Panel>
 
-              {amount && !amountError && (
+              {!isGatewayMethod && amount && !amountError && (
                 <Panel title="Transaction ID (ট্রানজেকশন আইডি)">
                   <input
                     type="text"
                     placeholder="উদাহরণ: ODM2JXXXXX"
                     value={transactionReference}
                     onChange={(e) => setTransactionReference(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-base px-4 py-3 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
+                    className="w-full border-[0.5px] border-white/25 bg-base px-4 py-3 text-sm font-semibold text-[var(--text-primary)] focus:border-[var(--brand)] focus:outline-none"
                     required
                   />
                   {!transactionReference.trim() && (
@@ -387,18 +580,32 @@ export default function DepositPage() {
                 </Panel>
               )}
 
-              {/* Gentle reminder */}
-              <GentleReminder />
+              {gatewayError && (
+                <p className="text-xs font-bold text-rose-500">{gatewayError}</p>
+              )}
 
               {/* Submit */}
               <button
                 type="submit"
-                disabled={!canSubmitDeposit || depositMutation.isPending}
-                className="w-full rounded-xl py-3.5 text-base font-extrabold text-[#141414] shadow-lg transition-all hover:opacity-90 active:scale-[.99] disabled:opacity-50"
+                disabled={
+                  isGatewayMethod
+                    ? !amount || !!amountError || redirecting
+                    : !canSubmitDeposit || depositMutation.isPending
+                }
+                className="w-full py-3.5 text-base font-extrabold text-[#141414] shadow-lg transition-all hover:opacity-90 active:scale-[.99] disabled:opacity-50"
                 style={{ background: 'linear-gradient(180deg, var(--gold-soft), var(--brand))' }}
               >
-                {depositMutation.isPending ? 'জমা হচ্ছে…' : 'Submit'}
+                {isGatewayMethod
+                  ? redirecting
+                    ? 'পেমেন্ট পেজে নেওয়া হচ্ছে…'
+                    : `${selectedMethod?.name ?? ''} দিয়ে পে করুন`
+                  : depositMutation.isPending
+                    ? 'জমা হচ্ছে…'
+                    : 'Submit'}
               </button>
+
+              {/* The instructions sit BELOW the submit button, per the design. */}
+              <GentleReminder />
             </form>
           )}
         </div>
@@ -410,6 +617,82 @@ export default function DepositPage() {
 /* ------------------------------------------------------------------ */
 /* Presentational helpers                                              */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Is this a MOBILE MONEY wallet? Only those carry the +PRIZE flag.
+ *
+ * Decided by excluding what is definitely not a mobile wallet — crypto and
+ * bank/card rails — rather than by listing the wallets that exist today. An
+ * allow-list would silently drop the flag from every wallet added in the admin
+ * panel later, which is the kind of failure nobody notices for months.
+ *
+ * The live method list is why the bank patterns are here: alongside bKash,
+ * Nagad, Rocket, Upay and U Cash the tenant also has "Bank Transfer" and
+ * "Bank Deposit", and neither of those is mobile money.
+ */
+function isMobileMoney(name: string): boolean {
+  const n = name.trim();
+  const crypto = /usdt|trc\s?-?20|erc\s?-?20|bep\s?-?20|tether|crypto|bitcoin|\bbtc\b|\beth\b|tron|\btrx\b|binance/i;
+  const bankOrCard = /\bbank\b|\bcard\b|visa|master\s?card|\bimps\b|\bneft\b|\brtgs\b|wire|swift|\bacct\b|account\s?transfer/i;
+  return !crypto.test(n) && !bankOrCard.test(n);
+}
+
+/**
+ * The red "+PRIZE" flag in the top-right corner of a payment tile.
+ *
+ * Drawn with a clip-path rather than shipping an image, so it scales with the
+ * tile and stays crisp at any pixel density. The notch cut into the left edge
+ * is what makes it read as a ribbon rather than a plain chip.
+ */
+function PrizeRibbon() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute right-0 top-0 select-none bg-[#e01b24] px-2 py-[3px] text-[8px] font-black italic leading-none tracking-tight text-white"
+      style={{ clipPath: 'polygon(100% 0, 100% 100%, 0 100%, 16% 50%, 0 0)' }}
+    >
+      +PRIZE
+    </span>
+  );
+}
+
+/**
+ * What the player sees on returning from the hosted checkout.
+ *
+ * 'slow' is the important one and is deliberately NOT phrased as a failure:
+ * confirmation is SMS-driven, so a payment can be genuinely made and not yet
+ * matched. Telling the player it failed would send them to support — or worse,
+ * to paying twice — for something the backend sweep settles on its own.
+ */
+function GatewayResultBanner({ state }: { state: 'checking' | 'paid' | 'failed' | 'slow' | 'cancelled' }) {
+  const copy: Record<typeof state, { text: string; cls: string }> = {
+    checking: { text: 'পেমেন্ট যাচাই করা হচ্ছে…', cls: 'border-[var(--brand)] text-[var(--text-primary)]' },
+    paid: { text: 'পেমেন্ট সফল! আপনার ব্যালেন্সে যোগ হয়েছে।', cls: 'border-emerald-500 text-emerald-400' },
+    failed: { text: 'পেমেন্ট সম্পন্ন হয়নি। আবার চেষ্টা করুন।', cls: 'border-rose-500 text-rose-400' },
+    slow: {
+      text: 'পেমেন্ট যাচাই হতে একটু সময় লাগছে। টাকা কেটে থাকলে কয়েক মিনিটের মধ্যেই ব্যালেন্সে যোগ হবে — আবার পেমেন্ট করবেন না।',
+      cls: 'border-amber-500 text-amber-400',
+    },
+    cancelled: { text: 'পেমেন্ট বাতিল করা হয়েছে।', cls: 'border-white/25 text-muted' },
+  };
+  const c = copy[state];
+  return (
+    <div className={`border-[0.5px] bg-base px-4 py-3 text-xs font-bold ${c.cls}`} role="status">
+      {c.text}
+    </div>
+  );
+}
+
+/** Brand-coloured triangle marking the selected tile, bottom-right corner. */
+function SelectedCorner() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute bottom-0 right-0 h-0 w-0"
+      style={{ borderLeft: '10px solid transparent', borderBottom: '10px solid var(--brand)' }}
+    />
+  );
+}
 
 /** "My wallet" card shell — gold header + Deposit/Withdrawal tabs. */
 function WalletCard({
@@ -424,7 +707,7 @@ function WalletCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-surface">
+    <div className="mx-auto w-full max-w-xl overflow-hidden border-[0.5px] border-border bg-surface">
       {/* Gold header */}
       <div
         className="relative flex items-center justify-center px-4 py-3"
@@ -461,7 +744,7 @@ function TabButton({ activeTab, onClick, children }: { activeTab: boolean; onCli
     <button
       type="button"
       onClick={onClick}
-      className={cn('rounded-lg py-2.5 text-sm font-extrabold transition-all', activeTab ? 'text-[#141414]' : 'text-muted hover:text-[var(--text-primary)]')}
+      className={cn('py-2.5 text-sm font-extrabold transition-all', activeTab ? 'text-[#141414]' : 'text-muted hover:text-[var(--text-primary)]')}
       style={activeTab ? { background: 'linear-gradient(180deg, var(--gold-soft), var(--brand))' } : undefined}
     >
       {children}
@@ -472,10 +755,10 @@ function TabButton({ activeTab, onClick, children }: { activeTab: boolean; onCli
 /** Section panel with a left accent bar and an optional right-aligned node. */
 function Panel({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-3.5">
+    <section className="border-[0.5px] border-border bg-surface p-3.5">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-          <span className="h-3.5 w-1 rounded-full bg-[var(--brand)]" />
+          <span className="h-3.5 w-1 bg-[var(--brand)]" />
           {title}
         </h2>
         {right}
@@ -489,7 +772,7 @@ function Panel({ title, right, children }: { title: string; right?: React.ReactN
 function GentleReminder() {
   const [open, setOpen] = useState(true);
   return (
-    <div className="rounded-2xl border border-border bg-surface">
+    <div className="border-[0.5px] border-border bg-surface">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -501,7 +784,7 @@ function GentleReminder() {
         <ChevronDown className={cn('h-4 w-4 text-muted transition-transform', open ? 'rotate-180' : '')} />
       </button>
       {open && (
-        <div className="border-t border-border px-4 py-3 text-[11px] leading-relaxed text-muted">
+        <div className="border-t-[0.5px] border-border px-4 py-3 text-[11px] leading-relaxed text-muted">
           <p className="mb-1.5 font-semibold text-[var(--text-primary)]">“SSP (Cashout) শুধুমাত্র ক্যাশ-আউটের জন্য।</p>
           <p className="mb-1.5">ডিপোজিটে দেরি এড়াতে অনুগ্রহ করে নিচের নির্দেশনাগুলো অনুসরণ করুন:</p>
           <ol className="list-decimal space-y-1 pl-4">
@@ -599,7 +882,7 @@ function DepositStatusCard({ deposit, onDismiss }: { deposit: PlayerDeposit; onD
           };
 
   return (
-    <div className={cn('flex items-start gap-3 rounded-xl border p-4', variant.wrap)}>
+    <div className={cn('flex items-start gap-3 border-[0.5px] p-4', variant.wrap)}>
       {variant.icon}
       <div className="min-w-0 flex-1">
         {variant.title}
@@ -610,7 +893,7 @@ function DepositStatusCard({ deposit, onDismiss }: { deposit: PlayerDeposit; onD
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="flex-shrink-0 rounded-md p-1 text-muted transition-colors hover:bg-elevated hover:text-[var(--text-primary)]"
+          className="flex-shrink-0 p-1 text-muted transition-colors hover:bg-elevated hover:text-[var(--text-primary)]"
         >
           <X className="h-4 w-4" />
         </button>

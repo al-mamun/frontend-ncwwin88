@@ -185,6 +185,12 @@ export interface PaymentMethod {
   sortOrder: number;
   isDepositEnabled: boolean;
   isWithdrawalEnabled: boolean;
+  /**
+   * True when this method is paid through a hosted checkout instead of by
+   * sending money to an agent number by hand. The gateway's credentials never
+   * reach the browser — the API derives this boolean server-side.
+   */
+  isGateway?: boolean;
 }
 
 export interface PaymentAccount {

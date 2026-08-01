@@ -80,6 +80,14 @@ export interface PlayerApi {
     input: DepositRequestInput,
     idempotencyKey: string,
   ): Promise<DepositRequestResponse>;
+  startGatewayDeposit(
+    input: { paymentMethodId: string; amount: number; currency: string },
+    idempotencyKey: string,
+  ): Promise<{ id: string; paymentUrl: string; status: string }>;
+  getGatewayDepositStatus(
+    depositId: string,
+  ): Promise<{ id: string; status: string; creditedMinor?: number }>;
+  cancelGatewayDeposit(depositId: string): Promise<{ id: string; status: string }>;
   createWithdrawal(
     input: WithdrawalRequestInput,
     idempotencyKey: string,
@@ -271,6 +279,30 @@ export const playerApi: PlayerApi = {
       headers: { 'Idempotency-Key': idempotencyKey },
       body: JSON.stringify(input),
     });
+  },
+
+  async startGatewayDeposit(input, idempotencyKey) {
+    return apiFetch<{ id: string; paymentUrl: string; status: string }>(
+      '/player/deposits/gateway',
+      {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
+  async getGatewayDepositStatus(depositId) {
+    return apiFetch<{ id: string; status: string; creditedMinor?: number }>(
+      `/player/deposits/${depositId}/gateway-status`,
+    );
+  },
+
+  async cancelGatewayDeposit(depositId) {
+    return apiFetch<{ id: string; status: string }>(
+      `/player/deposits/${depositId}/gateway-cancel`,
+      { method: 'POST' },
+    );
   },
 
   async createWithdrawal(input, idempotencyKey) {
