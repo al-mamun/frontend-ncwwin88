@@ -38,6 +38,7 @@ export const CANONICAL_CATEGORIES = [
   'fishing',
   'table',
   'arcade',
+  'lottery',
 ] as const;
 
 export type CanonicalCategory = (typeof CANONICAL_CATEGORIES)[number];
@@ -56,11 +57,14 @@ export function normalizeCategory(value: string | null | undefined = ''): string
     .replace(/[_\s]+/g, '-');
 
   if (['hot-game', 'hot-games', 'popular', 'featured'].includes(c)) return 'hot';
-  if (['slots', 'slot-game', 'slot-games'].includes(c)) return 'slot';
-  if (['live', 'live-casino', 'casino-live', 'baccarat', 'roulette'].includes(c)) return 'casino';
+  if (['slots', 'slot-game', 'slot-games', 'video-slot', 'video-slots'].includes(c)) return 'slot';
+  if (['live', 'live-casino', 'casino-live', 'casinolive', 'baccarat', 'roulette', 'lobby'].includes(c)) return 'casino';
   if (['sportsbook', 'sport', 'sports-game', 'exchange'].includes(c)) return 'sports';
-  if (['fish', 'fishing-game', 'fish-shooting'].includes(c)) return 'fishing';
-  if (['crash-game', 'crash-games', 'instant', 'flash'].includes(c)) return 'crash';
+  if (['fish', 'fish-game', 'fishing-game', 'fishing-games', 'fish-shooting'].includes(c)) return 'fishing';
+  if (['table-game', 'table-games', 'card', 'cards', 'board', 'dice', 'poker'].includes(c)) return 'table';
+  if (['crash-game', 'crash-games', 'instant', 'instant-game', 'instant-games', 'fast-games', 'flash'].includes(c)) return 'crash';
+  if (['arcade-game', 'arcade-games', 'mini-game', 'mini-games', 'minigame', 'minigames', 'egames', 'virtual'].includes(c)) return 'arcade';
+  if (['lotto', 'lottery', 'lotteries', 'keno'].includes(c)) return 'lottery';
 
   return c || 'slot';
 }
@@ -86,6 +90,7 @@ export const CATEGORY_NAV: CategoryNavItem[] = [
   { slug: 'fishing', label: 'Fishing', icon: Fish },
   { slug: 'table', label: 'Table', icon: Dices },
   { slug: 'arcade', label: 'Arcade', icon: Gamepad2 },
+  { slug: 'lottery', label: 'Lottery', icon: Ticket },
 ];
 
 /**
