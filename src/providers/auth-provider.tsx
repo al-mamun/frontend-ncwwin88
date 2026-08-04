@@ -28,14 +28,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SafeUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Bootstrap session on mount.
+  /*
+   * Bootstrap the session on mount.
+   *
+   * `loading` gates the entire player area behind an "Authenticating…"
+   * spinner, so whatever happens here MUST end. If this promise never settles
+   * - a stalled request that is neither answered nor refused, which is exactly
+   * what a flaky mobile network produces - the spinner stays up forever and
+   * the player has no way forward but to reload a page that looks broken.
+   *
+   * So: give the check a bounded window, and if it expires try once more
+   * before giving up. A slow answer that still arrives is treated as real;
+   * only after the retry also fails do we settle on "no session", and the
+   * finally clause guarantees the spinner comes down either way.
+   */
   useEffect(() => {
     let active = true;
+    const withTimeout = (ms: number) =>
+      Promise.race([
+        authApi.me(),
+        new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), ms)),
+      ]);
     (async () => {
-      const me = await authApi.me();
-      if (active) {
-        setUser(me);
-        setLoading(false);
+      try {
+        let me = await withTimeout(12000);
+        if (me === 'timeout') me = await withTimeout(12000);
+        if (active) setUser(me === 'timeout' ? null : me);
+      } catch {
+        if (active) setUser(null);
+      } finally {
+        if (active) setLoading(false);
       }
     })();
     return () => {

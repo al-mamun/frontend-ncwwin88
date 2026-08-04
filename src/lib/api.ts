@@ -88,6 +88,33 @@ export const __setRefreshHandler = (fn: (() => Promise<boolean>) | null) => {
   }
 };
 
+/**
+ * Endpoints where a 401 is the ANSWER, not a stale-token symptom.
+ *
+ * Refreshing after a rejected login would be pointless, and refreshing inside
+ * /auth/refresh would recurse. Everything else - INCLUDING /auth/me - must be
+ * allowed to refresh and retry.
+ *
+ * This used to exclude all of `/auth/`, which quietly took /auth/me with it,
+ * and /auth/me is the one request the whole session hangs off. The player
+ * bootstrap called it, got a 401 because the short-lived access token had
+ * expired, never tried the refresh token sitting right there in the cookie
+ * jar, and reported "not logged in" - so the app bounced them to /login.
+ *
+ * It bit hardest on the way back from the hosted checkout: the player leaves
+ * the site, spends a few minutes paying, and returns to a fresh page load with
+ * an expired access token - the exact conditions. They came back from a
+ * successful payment logged out.
+ */
+const NO_REFRESH_ON_401 = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]);
+
 // ─── Core fetch ────────────────────────────────────────────────
 export async function apiFetch<T>(
   endpoint: string,
@@ -103,7 +130,7 @@ export async function apiFetch<T>(
   let res = await doFetch();
 
   // If unauthorized, try a single refresh + retry.
-  if (res.status === 401 && !endpoint.startsWith('/auth/')) {
+  if (res.status === 401 && !NO_REFRESH_ON_401.has(endpoint.split('?')[0])) {
     const refreshed = await getRefresh();
     if (refreshed) res = await doFetch();
   }
