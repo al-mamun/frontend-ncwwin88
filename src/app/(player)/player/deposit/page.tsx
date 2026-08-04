@@ -63,7 +63,7 @@ export default function DepositPage() {
   const [successResponse, setSuccessResponse] = useState<DepositRequestResponse | null>(null);
 
   // Load accounts for the selected method
-  const { data: accounts } = usePaymentAccounts({
+  const { data: accounts, isLoading: accountsLoading } = usePaymentAccounts({
     type: 'deposit',
     methodId: selectedMethodId ?? undefined,
   });
@@ -236,11 +236,17 @@ export default function DepositPage() {
     return () => { cancelled = true; };
   }, [qc]);
 
-  // Auto-select the first channel's (randomly-picked) account when it changes.
+  /*
+   * Auto-select the first channel's (randomly-picked) account when it changes.
+   *
+   * The clear on an empty list is load-bearing. Switching from a method that
+   * has numbers to one that has none used to leave the previous method's
+   * account id in state, so the amount + transaction-id form kept rendering -
+   * bound to a number belonging to a method the player was no longer on. A
+   * deposit filed that way is money sent to the wrong place.
+   */
   useEffect(() => {
-    if (channels.length > 0) {
-      setSelectedAccountId(channels[0].account.id);
-    }
+    setSelectedAccountId(channels.length > 0 ? channels[0].account.id : null);
   }, [channels]);
 
   const minMinor = selectedAccount?.minLimitMinor ?? selectedMethod?.minDepositMinor ?? 10000;
@@ -494,6 +500,28 @@ export default function DepositPage() {
             )}
           </Panel>
 
+          {/*
+            A manual method with no usable number must SAY SO.
+          
+            The amount and transaction-id form only renders once an account is
+            selected, and an account is only selected if one is visible - so a
+            method whose numbers are all missing, all disabled, or all owned by an
+            agent this player does not sit under produced a dead panel: the method
+            tile highlighted and nothing below it. No channel, no number, no
+            amount, no transaction id, and no explanation - a page that looks
+            broken, because it is.
+          */}
+          {selectedMethodId && !isGatewayMethod && !accountsLoading && channels.length === 0 && (
+            <Panel title="Deposit Channel">
+              <p data-testid="noDepositNumber" className="text-[13px] font-semibold leading-relaxed text-[var(--text-primary)]">
+                No deposit number is available for this method right now.
+              </p>
+              <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                Please choose another payment method, or contact support and they will help you complete the deposit.
+              </p>
+            </Panel>
+          )}
+          
           {/* Deposit Channel — one chip per TYPE (Cash Out / Send Money) */}
           {selectedMethodId && !isGatewayMethod && channels.length > 0 && (
             <Panel title="Deposit Channel">
