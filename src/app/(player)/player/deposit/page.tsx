@@ -81,7 +81,21 @@ export default function DepositPage() {
    * transaction id to type. The flag is derived server-side — the browser never
    * sees the gateway's credentials.
    */
-  const isGatewayMethod = Boolean(selectedMethod?.isGateway);
+  /*
+   * A gateway that cannot start must not trap the player.
+   *
+   * The owner can switch a tenant's gateway off at any moment, and a page
+   * already open keeps the answer it fetched while it was on - so the player
+   * sees a checkout button, the start call is refused, and the error says "use
+   * a manual method" while offering no way to reach one. That is a dead end on
+   * the one screen that has to work.
+   *
+   * On a failed start we re-ask the server and fall back to the manual flow for
+   * the rest of this visit. If the gateway really is off, the refetch says so
+   * and the channel, agent number and transaction id come back by themselves.
+   */
+  const [gatewayUnavailable, setGatewayUnavailable] = useState(false);
+  const isGatewayMethod = Boolean(selectedMethod?.isGateway) && !gatewayUnavailable;
   const [gatewayError, setGatewayError] = useState<string | null>(null);
   const [gatewayResult, setGatewayResult] =
     useState<{ state: 'checking' | 'paid' | 'failed' | 'slow' | 'cancelled' } | null>(null);
@@ -255,6 +269,9 @@ export default function DepositPage() {
   }, [selectedMethodId, selectedAccountId, amount, amountError, transactionReference, depositMutation.isPending]);
 
   function selectMethod(id: string) {
+    // A new method deserves a fresh attempt at its own gateway.
+    setGatewayUnavailable(false);
+    setGatewayError(null);
     setSelectedMethodId(id);
     setSelectedAccountId(null);
     setAmount('');
@@ -316,6 +333,14 @@ export default function DepositPage() {
         setGatewayError(
           err instanceof ApiRequestError ? err.message : 'পেমেন্ট শুরু করা যায়নি। আবার চেষ্টা করুন।',
         );
+      
+        /*
+         * Re-ask the server, then hand the player the manual flow. Both matter:
+         * the refetch corrects a stale "this is a gateway method", and the flag
+         * covers a gateway that is still on but simply not answering.
+         */
+        void qc.invalidateQueries({ queryKey: ['payment-methods'] });
+        setGatewayUnavailable(true);
       }
       setRedirecting(false);
       return;
