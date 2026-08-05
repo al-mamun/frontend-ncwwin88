@@ -43,6 +43,10 @@ export interface AffiliateBalance {
   debtMinor: number;
   maturedAt: string | null;
   minPayoutMinor: number;
+  /** The rail the partner is paid on, as saved on their account. */
+  payoutMethod: string;
+  /** The account or number the money goes to. */
+  payoutDetails: string | null;
   /** Only one withdrawal may be in flight at a time. */
   openPayout: { id: string; amountMinor: number; status: string; createdAt: string | null } | null;
   canWithdraw: boolean;
@@ -247,8 +251,20 @@ export const affiliateApi = {
   payoutHistory(page = 1, limit = 20): Promise<{ items: AffiliatePayoutRow[]; total: number }> {
     return affiliateFetch(`/affiliate/payouts?page=${page}&limit=${limit}`);
   },
-  requestPayout(amountMinor: number): Promise<{ payout: { id: string; amountMinor: number; status: string; createdAt: string | null } }> {
-    return affiliateFetch('/affiliate/payouts', { method: 'POST', body: JSON.stringify({ amountMinor }) });
+  /**
+   * Raise a withdrawal. The method and destination travel WITH the request —
+   * sending only an amount left every payout stamped "other" in the operator's
+   * queue, so they had a number and no idea which wallet to send it through.
+   */
+  requestPayout(
+    amountMinor: number,
+    method?: string,
+    payoutDetails?: string,
+  ): Promise<{ payout: { id: string; amountMinor: number; status: string; createdAt: string | null } }> {
+    return affiliateFetch('/affiliate/payouts', {
+      method: 'POST',
+      body: JSON.stringify({ amountMinor, ...(method ? { method } : {}), ...(payoutDetails ? { payoutDetails } : {}) }),
+    });
   },
 
   verificationStatus(): Promise<AffiliateVerification> {

@@ -32,6 +32,19 @@ import {
   formatMoney,
 } from '@/components/affiliate/portal-ui';
 
+/** Payout rails a partner can choose, with the names an operator will recognise. */
+const RAILS = ['bkash', 'nagad', 'rocket', 'bank', 'usdt', 'skrill', 'neteller'] as const;
+const RAIL_LABELS: Record<string, string> = {
+  bkash: 'bKash',
+  nagad: 'Nagad',
+  rocket: 'Rocket',
+  bank: 'Bank transfer',
+  usdt: 'USDT',
+  skrill: 'Skrill',
+  neteller: 'Neteller',
+  other: 'Not set',
+};
+
 function statusTone(status: string): 'success' | 'neutral' | 'danger' | 'gold' | 'warning' {
   if (status === 'paid') return 'success';
   if (status === 'rejected') return 'danger';
@@ -61,6 +74,8 @@ function toMinor(input: string): number | null {
 export function WithdrawCard({ currency }: { currency?: string }) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('');
+  const [details, setDetails] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -91,7 +106,7 @@ export function WithdrawCard({ currency }: { currency?: string }) {
    */
 
   const mutation = useMutation({
-    mutationFn: (minor: number) => affiliateApi.requestPayout(minor),
+    mutationFn: (minor: number) => affiliateApi.requestPayout(minor, method || undefined, details || undefined),
     onSuccess: () => {
       setError(null);
       setDone(true);
@@ -105,22 +120,36 @@ export function WithdrawCard({ currency }: { currency?: string }) {
     },
   });
 
+  /*
+   * Seed the destination fields from the saved account exactly once. Guarded on
+   * emptiness rather than run in an effect so a partner correcting the number
+   * mid-form is never overwritten by a background refetch of the balance.
+   */
+  const setMethodOnce = (v: string) => { if (!method) setMethod(v); };
+  const setDetailsOnce = (v: string) => { if (!details) setDetails(v); };
+
   if (balanceQ.isLoading) return <Skeleton className="h-[260px] w-full rounded-2xl" />;
   // No balance endpoint (older backend) — draw nothing rather than an error box.
   if (!bal) return null;
+
+  // Seed from what the partner already saved, so the usual case is confirm-and-go.
+  if (!method && bal.payoutMethod && bal.payoutMethod !== 'other') setMethodOnce(bal.payoutMethod);
+  if (!details && bal.payoutDetails) setDetailsOnce(bal.payoutDetails);
 
   const open = bal.openPayout;
   const minor = toMinor(amount);
   const belowMin = bal.minPayoutMinor > 0 && (minor ?? 0) < bal.minPayoutMinor;
   const overBalance = (minor ?? 0) > bal.availableMinor;
   const submitDisabled =
-    mutation.isPending || !!open || !minor || belowMin || overBalance || bal.availableMinor <= 0;
+    mutation.isPending || !!open || !minor || belowMin || overBalance || bal.availableMinor <= 0 || !method || !details.trim();
 
   const submit = () => {
     setError(null);
     if (!minor) { setError('Enter an amount to withdraw.'); return; }
     if (overBalance) { setError('That is more than your available balance.'); return; }
     if (belowMin) { setError(`The minimum withdrawal is ${formatMoney(bal.minPayoutMinor, ccy)}.`); return; }
+    if (!method) { setError('Choose how you want to be paid.'); return; }
+    if (!details.trim()) { setError('Enter the account or number to send it to.'); return; }
     mutation.mutate(minor);
   };
 
@@ -200,7 +229,44 @@ export function WithdrawCard({ currency }: { currency?: string }) {
         </div>
       ) : (
         <div className="mt-4 border-t border-[var(--border)] pt-4">
-          <label className={LABEL} htmlFor="withdraw-amount">
+          {/*
+            WHERE it goes, asked before HOW MUCH.
+            The form used to send an amount and nothing else, so every request
+            reached the operator stamped "OTHER" — a destination number with no
+            indication of which wallet to send it through. Prefilled from the
+            partner's saved payout details so the common case is two taps.
+          */}
+          <label className={LABEL} htmlFor="withdraw-method">
+            Pay me by
+          </label>
+          <select
+            id="withdraw-method"
+            className={`${INPUT} mt-2`}
+            value={method}
+            disabled={mutation.isPending}
+            onChange={(e) => { setMethod(e.target.value); setError(null); }}
+          >
+            <option value="">Select a method…</option>
+            {RAILS.map((rail) => (
+              <option key={rail} value={rail}>
+                {RAIL_LABELS[rail]}
+              </option>
+            ))}
+          </select>
+
+          <label className={`${LABEL} mt-3 block`} htmlFor="withdraw-details">
+            {method === 'bank' ? 'Account number' : method === 'usdt' ? 'Wallet address' : 'Account number'}
+          </label>
+          <input
+            id="withdraw-details"
+            className={`${INPUT} mt-2`}
+            value={details}
+            placeholder={method === 'usdt' ? 'Wallet address' : '01XXXXXXXXX'}
+            disabled={mutation.isPending}
+            onChange={(e) => { setDetails(e.target.value); setError(null); }}
+          />
+
+          <label className={`${LABEL} mt-3 block`} htmlFor="withdraw-amount">
             Amount
           </label>
           <div className="mt-2 flex gap-2">
