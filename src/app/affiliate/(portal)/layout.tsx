@@ -65,7 +65,12 @@ const NAV: NavGroup[] = [
     // partner opens to see what they are owed, and it should not be something
     // they have to hunt for among the analytics.
     title: 'Earnings',
-    items: [{ href: '/affiliate/earnings', label: 'My earnings', icon: Icon.wallet }],
+    items: [
+      { href: '/affiliate/earnings', label: 'My earnings', icon: Icon.wallet },
+      // Beside earnings, not buried under Reports: "where is my money" and
+      // "where did my money go" are the same question asked a week apart.
+      { href: '/affiliate/withdrawals', label: 'Withdrawals', icon: Icon.receipt },
+    ],
   },
   {
     title: 'Reports',

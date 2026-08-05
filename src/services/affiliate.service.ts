@@ -56,6 +56,8 @@ export interface AffiliatePayoutRow {
   id: string;
   amountMinor: number;
   currency: string;
+  /** Where it was sent. Absent on rows raised before destinations were recorded. */
+  payoutDetails?: string | null;
   status: 'requested' | 'approved' | 'paid' | 'rejected';
   method: string;
   reference: string | null;
