@@ -17,7 +17,7 @@
  */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { affiliateApi, type AffiliateBalance } from '@/services/affiliate.service';
 import {
@@ -81,11 +81,14 @@ export function WithdrawCard({ currency }: { currency?: string }) {
   const bal: AffiliateBalance | undefined = balanceQ.data;
   const ccy = bal?.currency || currency || '';
 
-  // Prefill with the full available balance — withdrawing everything is what
-  // almost everyone wants, and typing it out again is friction for no gain.
-  useEffect(() => {
-    if (bal && !amount && bal.availableMinor > 0) setAmount((bal.availableMinor / 100).toFixed(2));
-  }, [bal, amount]);
+  /*
+   * The field starts EMPTY on purpose.
+   *
+   * It used to arrive prefilled with the whole balance, which quietly makes
+   * "withdraw everything" the default action on a money form — one stray click
+   * and the entire balance is committed. The partner types the amount they
+   * actually want.
+   */
 
   const mutation = useMutation({
     mutationFn: (minor: number) => affiliateApi.requestPayout(minor),
@@ -141,27 +144,24 @@ export function WithdrawCard({ currency }: { currency?: string }) {
           <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--text-primary)]">
             {formatMoney(bal.pendingMinor, ccy)}
           </p>
+          {/*
+            Pending is everything the partner cannot draw on today — commission
+            maturing from Monday AND anything already committed to a withdrawal.
+            The sub-line names whichever applies, because "pending" alone does
+            not tell them whether to wait for Tuesday or for your payment run.
+          */}
           <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">
-            {bal.pendingMinor > 0 ? 'Becomes available on Tuesday' : 'Nothing settling right now'}
+            {(bal.reservedMinor ?? 0) > 0 && (bal.maturingMinor ?? 0) > 0
+              ? `${formatMoney(bal.reservedMinor, ccy)} withdrawing · ${formatMoney(bal.maturingMinor, ccy)} available Tuesday`
+              : (bal.reservedMinor ?? 0) > 0
+                ? 'Withdrawal in progress'
+                : bal.pendingMinor > 0
+                  ? 'Becomes available on Tuesday'
+                  : 'Nothing settling right now'}
           </p>
         </div>
       </div>
 
-      {/*
-        Money already committed to a withdrawal is NOT in `available` any more,
-        so it needs its own line — otherwise a partner who has withdrawn
-        everything sees 0.00 with no explanation of where their balance went.
-      */}
-      {(bal.reservedMinor ?? 0) > 0 ? (
-        <div className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-3">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-            In withdrawal
-          </span>
-          <span className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
-            {formatMoney(bal.reservedMinor, ccy)}
-          </span>
-        </div>
-      ) : null}
 
       {bal.debtMinor > 0 ? (
         <p className="mt-3 border-l-2 border-[var(--text-muted)] pl-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">
@@ -210,6 +210,7 @@ export function WithdrawCard({ currency }: { currency?: string }) {
               inputMode="decimal"
               value={amount}
               placeholder="0.00"
+              aria-describedby="withdraw-rules"
               disabled={bal.availableMinor <= 0 || mutation.isPending}
               onChange={(e) => {
                 setAmount(e.target.value);
@@ -222,12 +223,40 @@ export function WithdrawCard({ currency }: { currency?: string }) {
             </button>
           </div>
 
-          {bal.availableMinor <= 0 ? (
-            <p className="mt-2 text-xs leading-relaxed text-[var(--text-secondary)]">
-              Nothing is available to withdraw yet. Commission earned this week settles on Monday and becomes
-              available on Tuesday.
-            </p>
-          ) : null}
+          {/*
+            State the rule while they type, not after they press.
+            The button is disabled below the minimum, and a disabled button with
+            no explanation reads as broken — the partner cannot tell whether the
+            amount is wrong, the account is wrong, or the page is.
+          */}
+          <div id="withdraw-rules" className="mt-2 space-y-1">
+            {bal.availableMinor <= 0 ? (
+              <p className="text-xs leading-relaxed text-[var(--text-secondary)]">
+                Nothing is available to withdraw yet. Commission earned this week settles on Monday and becomes
+                available on Tuesday.
+              </p>
+            ) : (
+              <>
+                {bal.minPayoutMinor > 0 ? (
+                  <p
+                    className={
+                      minor && belowMin
+                        ? 'text-xs font-semibold leading-relaxed text-danger'
+                        : 'text-xs leading-relaxed text-[var(--text-secondary)]'
+                    }
+                  >
+                    Minimum withdrawal {formatMoney(bal.minPayoutMinor, ccy)}
+                    {minor && belowMin ? ' — enter this amount or more.' : '.'}
+                  </p>
+                ) : null}
+                {minor && overBalance ? (
+                  <p className="text-xs font-semibold leading-relaxed text-danger">
+                    That is more than your available balance of {formatMoney(bal.availableMinor, ccy)}.
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
 
           {error ? <p className="mt-2 text-xs font-semibold text-danger">{error}</p> : null}
           {done && !open ? (

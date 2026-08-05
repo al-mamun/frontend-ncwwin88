@@ -26,8 +26,13 @@ export interface AffiliateProfile {
 /** Pending vs available commission, and whether a withdrawal can be raised now. */
 export interface AffiliateBalance {
   currency: string;
-  /** Earned at Monday's settlement. NOT withdrawable until it matures. */
+  /**
+   * Everything NOT withdrawable today: commission maturing from Monday PLUS any
+   * amount already committed to a withdrawal.
+   */
   pendingMinor: number;
+  /** The maturing half on its own (settles Monday, available Tuesday). */
+  maturingMinor: number;
   /** Matured, and not already committed to a withdrawal. The only withdrawable figure. */
   availableMinor: number;
   /** Committed to a withdrawal that has not been paid yet. */
