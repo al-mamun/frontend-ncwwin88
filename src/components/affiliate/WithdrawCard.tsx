@@ -147,6 +147,22 @@ export function WithdrawCard({ currency }: { currency?: string }) {
         </div>
       </div>
 
+      {/*
+        Money already committed to a withdrawal is NOT in `available` any more,
+        so it needs its own line — otherwise a partner who has withdrawn
+        everything sees 0.00 with no explanation of where their balance went.
+      */}
+      {(bal.reservedMinor ?? 0) > 0 ? (
+        <div className="mt-3 flex items-center justify-between border-t border-[var(--border)] pt-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            In withdrawal
+          </span>
+          <span className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
+            {formatMoney(bal.reservedMinor, ccy)}
+          </span>
+        </div>
+      ) : null}
+
       {bal.debtMinor > 0 ? (
         <p className="mt-3 border-l-2 border-[var(--text-muted)] pl-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">
           {formatMoney(bal.debtMinor, ccy)} of previously overpaid commission is being recovered from future
@@ -178,7 +194,8 @@ export function WithdrawCard({ currency }: { currency?: string }) {
             <span className="font-bold tabular-nums">{formatMoney(open.amountMinor, ccy)}</span> in progress.
           </p>
           <p className="mt-1 text-xs leading-relaxed text-[var(--text-secondary)]">
-            Raised {formatDate(open.createdAt)}. You can raise the next one once this has been settled.
+            Raised {formatDate(open.createdAt)}. That amount has already been taken out of your available
+            balance. You can raise the next one once this has been settled.
           </p>
         </div>
       ) : (

@@ -28,8 +28,10 @@ export interface AffiliateBalance {
   currency: string;
   /** Earned at Monday's settlement. NOT withdrawable until it matures. */
   pendingMinor: number;
-  /** Matured on Tuesday. The only figure a withdrawal can draw on. */
+  /** Matured, and not already committed to a withdrawal. The only withdrawable figure. */
   availableMinor: number;
+  /** Committed to a withdrawal that has not been paid yet. */
+  reservedMinor: number;
   paidMinor: number;
   lifetimeMinor: number;
   /** Previously overpaid commission being recovered from future earnings. */
