@@ -23,6 +23,36 @@ export interface AffiliateProfile {
   createdAt: string | null;
 }
 
+/** Pending vs available commission, and whether a withdrawal can be raised now. */
+export interface AffiliateBalance {
+  currency: string;
+  /** Earned at Monday's settlement. NOT withdrawable until it matures. */
+  pendingMinor: number;
+  /** Matured on Tuesday. The only figure a withdrawal can draw on. */
+  availableMinor: number;
+  paidMinor: number;
+  lifetimeMinor: number;
+  /** Previously overpaid commission being recovered from future earnings. */
+  debtMinor: number;
+  maturedAt: string | null;
+  minPayoutMinor: number;
+  /** Only one withdrawal may be in flight at a time. */
+  openPayout: { id: string; amountMinor: number; status: string; createdAt: string | null } | null;
+  canWithdraw: boolean;
+}
+
+export interface AffiliatePayoutRow {
+  id: string;
+  amountMinor: number;
+  currency: string;
+  status: 'requested' | 'approved' | 'paid' | 'rejected';
+  method: string;
+  reference: string | null;
+  note: string | null;
+  paidAt: string | null;
+  createdAt: string | null;
+}
+
 export interface AffiliateVerification {
   /**
    * `pending` is an address the partner has asked to move to but has not proven
@@ -198,6 +228,20 @@ export const affiliateApi = {
   },
   changePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean }> {
     return affiliateFetch<{ ok: boolean }>('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword }) });
+  },
+
+  /* ── withdrawals ──────────────────────────────────────────────────────
+   * The portal previously had no way to ask for money at all: a partner watched
+   * a balance accumulate and had to contact support to touch any of it.
+   * ─────────────────────────────────────────────────────────────────────── */
+  balance(): Promise<AffiliateBalance> {
+    return affiliateFetch<AffiliateBalance>('/affiliate/balance');
+  },
+  payoutHistory(page = 1, limit = 20): Promise<{ items: AffiliatePayoutRow[]; total: number }> {
+    return affiliateFetch(`/affiliate/payouts?page=${page}&limit=${limit}`);
+  },
+  requestPayout(amountMinor: number): Promise<{ payout: { id: string; amountMinor: number; status: string; createdAt: string | null } }> {
+    return affiliateFetch('/affiliate/payouts', { method: 'POST', body: JSON.stringify({ amountMinor }) });
   },
 
   verificationStatus(): Promise<AffiliateVerification> {

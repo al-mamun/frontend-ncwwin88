@@ -286,6 +286,11 @@ export default function AffiliatePortalPage() {
             <Card><CardContent className="py-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Pending commission</div>
               <div className="text-xl font-bold">{formatCurrency(affiliate.pendingCommissionMinor, affiliate.currency)}</div>
+              {/* Under the weekly model this is not "awaiting approval" — it is
+                  last week's earnings serving a one-day hold, so say which. */}
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                Earned Monday · available to withdraw Tuesday
+              </div>
             </CardContent></Card>
             <Card><CardContent className="py-4">
               <div className="text-xs uppercase tracking-wide text-muted-foreground">Lifetime commission</div>

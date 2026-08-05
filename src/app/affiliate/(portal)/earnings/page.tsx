@@ -25,6 +25,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { affiliateReportsApi, type EarningsLine } from '@/services/affiliate-reports.service';
 import { Donut, type DonutSlice } from '@/components/affiliate/portal-charts';
+import { WithdrawCard } from '@/components/affiliate/WithdrawCard';
 import {
   Badge,
   EmptyState,
@@ -249,7 +250,7 @@ export default function EarningsPage() {
           <BalanceTile
             label="Pending"
             value={formatMoney(ctx.pendingMinor, currency)}
-            hint="Accrued, not yet approved"
+            hint="Earned Monday, available Tuesday"
             tone="muted"
           />
           <BalanceTile label="Paid to date" value={formatMoney(ctx.paidMinor, currency)} hint="Already withdrawn" />
@@ -317,6 +318,14 @@ export default function EarningsPage() {
 
         {/* ── Payout readiness + mix ─────────────────────────────────────── */}
         <div className="space-y-5 lg:col-span-2">
+          {/*
+            The withdrawal control sits ABOVE the readiness meter on purpose: a
+            partner opening this page wants to move their money, not read about
+            whether they could. The meter below still explains a shortfall when
+            there is one.
+          */}
+          <WithdrawCard currency={currency} />
+
           {payout ? (
             <SectionCard
               title="Payout readiness"
