@@ -26,6 +26,7 @@ import { GamePlayOverlay } from '@/components/shared/game-play-overlay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Game, GameSession } from '@/types';
+import { openGameTab, deliverGameUrl } from '@/lib/game-launch';
 
 export default function GameCategoryLobby() {
   const router = useRouter();
@@ -138,8 +139,21 @@ export default function GameCategoryLobby() {
   const handleLaunch = (game: Game) => {
     if (!user) { router.push('/login'); return; }
     setLaunchError(null);
+    // Opened BEFORE the request: a popup created after an await is blocked.
+    const __tab = openGameTab(game.name);
     launchMutation.mutate(game.id, {
-      onSuccess: (session) => setActivePlay({ game, session }),
+      onSuccess: (session) => {
+        /*
+         * Real-money launches go to their own tab at the provider's URL. The
+         * tab was opened synchronously above, before the request, because a
+         * popup opened after an await is blocked — hardest on mobile, which is
+         * most of the traffic. A session with no launchUrl is a demo/preview
+         * and still uses the in-page overlay.
+         */
+        if (session.launchUrl) { deliverGameUrl(__tab, session.launchUrl); return; }
+        __tab.cancel();
+        setActivePlay({ game, session });
+      },
       onError: (err) =>
         setLaunchError(
           err instanceof Error ? err.message : 'Could not start the game. Please try again.',

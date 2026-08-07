@@ -16,6 +16,7 @@ import { useAuth } from '../../providers/auth-provider';
 import { useI18n } from '../../core/i18n/LanguageProvider';
 import MobileCategoryBar from './components/MobileCategoryBar';
 import type { Game, GameSession } from '../../types';
+import { openGameTab, deliverGameUrl } from '@/lib/game-launch';
 
 // ── Static banner fallbacks (from html-design/assets/slider) ──────────────
 const BANNER_SLIDES = [
@@ -338,8 +339,21 @@ export default function Mcwwin87HomePage() {
   const handlePlay = (game: Game) => {
     if (!isAuthed) { setPreviewGame(game); return; }
     setLaunchError(null);
+    // Opened BEFORE the request: a popup created after an await is blocked.
+    const __tab = openGameTab(game.name);
     launchMutation.mutate(game.id, {
-      onSuccess: (session) => setActivePlay({ game, session }),
+      onSuccess: (session) => {
+        /*
+         * Real-money launches go to their own tab at the provider's URL. The
+         * tab was opened synchronously above, before the request, because a
+         * popup opened after an await is blocked — hardest on mobile, which is
+         * most of the traffic. A session with no launchUrl is a demo/preview
+         * and still uses the in-page overlay.
+         */
+        if (session.launchUrl) { deliverGameUrl(__tab, session.launchUrl); return; }
+        __tab.cancel();
+        setActivePlay({ game, session });
+      },
       onError: (err) => setLaunchError(err instanceof Error ? err.message : 'Could not start the game.'),
     });
   };
