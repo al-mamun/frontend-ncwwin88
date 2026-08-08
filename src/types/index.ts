@@ -191,6 +191,18 @@ export interface PaymentMethod {
    * reach the browser — the API derives this boolean server-side.
    */
   isGateway?: boolean;
+  /**
+   * For a gateway method: the ways the operator's merchant account can actually
+   * be paid — Cash Out, Send Money — as reported by the gateway itself.
+   *
+   * The player picks one here so the checkout opens straight on it instead of
+   * asking them to choose a second time, on a screen where they could pick a
+   * different channel than the one we recorded against the deposit.
+   *
+   * Absent or empty means we could not ask the gateway; the checkout then shows
+   * its own menu, which is what always used to happen.
+   */
+  gatewayChannels?: Array<{ key: string; label: string }>;
 }
 
 export interface PaymentAccount {

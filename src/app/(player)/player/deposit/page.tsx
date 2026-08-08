@@ -97,6 +97,13 @@ export default function DepositPage() {
   const [gatewayUnavailable, setGatewayUnavailable] = useState(false);
   const isGatewayMethod = Boolean(selectedMethod?.isGateway) && !gatewayUnavailable;
   const [gatewayError, setGatewayError] = useState<string | null>(null);
+  /*
+   * Which channel the player picked for a GATEWAY method (Cash Out / Send
+   * Money). Kept apart from selectedAccountId: that one names a tenant account
+   * row, and a gateway method has none — the destination number belongs to the
+   * merchant account at the gateway, not to us.
+   */
+  const [selectedChannelKey, setSelectedChannelKey] = useState<string | null>(null);
   const [gatewayResult, setGatewayResult] =
     useState<{ state: 'checking' | 'paid' | 'failed' | 'slow' | 'cancelled' } | null>(null);
   const [redirecting, setRedirecting] = useState(false);
@@ -125,6 +132,27 @@ export default function DepositPage() {
     });
     return out;
   }, [accounts]);
+
+  /*
+   * The channel tiles for a gateway method. Comes from the gateway, so it lists
+   * only what the merchant can really receive — a wallet with no account there
+   * is not offered at all, rather than dead-ending on the checkout page.
+   */
+  const gatewayChannels = useMemo(
+    () => (isGatewayMethod ? selectedMethod?.gatewayChannels ?? [] : []),
+    [isGatewayMethod, selectedMethod],
+  );
+
+  /*
+   * One option is not a choice. When the merchant offers a single channel, pick
+   * it silently rather than making the player tap a tile that has no
+   * alternative — and clear the pick whenever the method changes, so a stale
+   * key from bKash can never be sent with a Nagad deposit.
+   */
+  useEffect(() => {
+    if (gatewayChannels.length === 1) setSelectedChannelKey(gatewayChannels[0].key);
+    else setSelectedChannelKey(null);
+  }, [gatewayChannels, selectedMethodId]);
 
   /**
    * Poll one gateway deposit until it resolves.
@@ -297,6 +325,15 @@ export default function DepositPage() {
     if (isGatewayMethod) {
       const minor = Math.round(parseFloat(amount) * 100);
       if (!minor || amountError) return;
+      /*
+       * A real choice must be made before we send them. Submitting with no
+       * channel would land them on the checkout's menu — the extra step this
+       * whole flow exists to remove.
+       */
+      if (gatewayChannels.length > 1 && !selectedChannelKey) {
+        setGatewayError('অনুগ্রহ করে ডিপোজিট চ্যানেল নির্বাচন করুন।');
+        return;
+      }
       setGatewayError(null);
       setRedirecting(true);
 
@@ -320,7 +357,14 @@ export default function DepositPage() {
       const checkoutWindow = window.open('', '_blank');
       try {
         const res = await playerApi.startGatewayDeposit(
-          { paymentMethodId: selectedMethod.id, amount: minor, currency: selectedMethod.currency },
+          {
+            paymentMethodId: selectedMethod.id,
+            amount: minor,
+            currency: selectedMethod.currency,
+            // Omitted when there is nothing to say: the checkout then shows its
+            // own menu, exactly as it did before this existed.
+            ...(selectedChannelKey ? { channelKey: selectedChannelKey } : {}),
+          },
           generateIdempotencyKey(),
         );
         if (checkoutWindow && !checkoutWindow.closed) {
@@ -522,6 +566,35 @@ export default function DepositPage() {
             </Panel>
           )}
           
+          {/* Gateway: the channels the merchant can actually receive. Same
+              chips as the manual flow, so the two paths look identical to a
+              player who does not know which one they are on. */}
+          {selectedMethodId && isGatewayMethod && gatewayChannels.length > 1 && (
+            <Panel title="Deposit Channel">
+              <div className="grid grid-cols-2 gap-2.5">
+                {gatewayChannels.map((ch) => {
+                  const active = selectedChannelKey === ch.key;
+                  return (
+                    <button
+                      key={ch.key}
+                      type="button"
+                      onClick={() => setSelectedChannelKey(ch.key)}
+                      className={cn(
+                        'relative border-[0.5px] px-3 py-3 text-sm font-bold transition-all',
+                        active
+                          ? 'border-[var(--brand)] bg-elevated text-[var(--brand)]'
+                          : 'border-[0.5px] border-white/25 bg-base text-[var(--text-primary)] hover:border-[var(--brand)]/60',
+                      )}
+                    >
+                      {ch.label === 'Cash Out' ? 'ক্যাশ আউট' : ch.label === 'Send Money' ? 'সেন্ড মানি' : ch.label}
+                      {active && <SelectedCorner />}
+                    </button>
+                  );
+                })}
+              </div>
+            </Panel>
+          )}
+
           {/* Deposit Channel — one chip per TYPE (Cash Out / Send Money) */}
           {selectedMethodId && !isGatewayMethod && channels.length > 0 && (
             <Panel title="Deposit Channel">

@@ -81,7 +81,7 @@ export interface PlayerApi {
     idempotencyKey: string,
   ): Promise<DepositRequestResponse>;
   startGatewayDeposit(
-    input: { paymentMethodId: string; amount: number; currency: string },
+    input: { paymentMethodId: string; amount: number; currency: string; channelKey?: string },
     idempotencyKey: string,
   ): Promise<{ id: string; paymentUrl: string; status: string }>;
   getGatewayDepositStatus(
